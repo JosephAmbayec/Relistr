@@ -158,7 +158,7 @@ jobs:
         path: releases/
         
     - name: Publish to Chrome Web Store
-      if: secrets.CHROME_EXTENSION_ID && secrets.CHROME_CLIENT_ID && secrets.CHROME_CLIENT_SECRET && secrets.CHROME_REFRESH_TOKEN
+      if: ${{ secrets.CHROME_EXTENSION_ID && secrets.CHROME_CLIENT_ID && secrets.CHROME_CLIENT_SECRET && secrets.CHROME_REFRESH_TOKEN }}
       uses: mnao305/chrome-extension-upload@v4.0.1
       with:
         file-path: releases/relistr-${{ github.event.release.tag_name }}.zip

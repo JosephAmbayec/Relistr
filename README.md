@@ -2,7 +2,7 @@
 
 A browser extension that removes sponsored listings and advertisements from websites using configurable CSS selectors, text matching, and attribute detection.
 
-[![Build Status](https://github.com/JosephAmbayec/Relistr/workflows/CI/badge.svg)](https://github.com/JosephAmbayec/Relistr/actions)
+[![Build Status](https://github.com/JosephAmbayec/Relistr/actions/workflows/ci.yml/badge.svg)](https://github.com/JosephAmbayec/Relistr/actions)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/{extension-id-will-add})](https://chrome.google.com/webstore/detail/{extension-id-will-add})
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
