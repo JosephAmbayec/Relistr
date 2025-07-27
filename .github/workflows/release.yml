@@ -118,7 +118,7 @@ jobs:
           
           ## What's New
           
-          See the full changelog at [CHANGELOG.md](https://github.com/JosephAmbayec/Relistr/blob/main/CHANGELOG.md)
+          See the full changelog at [CHANGELOG.md](https://github.com/JosephAmbayec/Relistr/blob/master/CHANGELOG.md)
           
         draft: false
         prerelease: ${{ inputs.prerelease }}
