@@ -35,16 +35,29 @@ jobs:
       
     - name: Update version
       run: |
-        # Update package.json version
-        npm version ${{ inputs.version }} --no-git-tag-version
+        # Get current version from package.json
+        CURRENT_VERSION=$(node -e "console.log(require('./package.json').version)")
         
-        # Update manifest.json version
-        node -e "
-          const fs = require('fs');
-          const manifest = require('./manifest.json');
-          manifest.version = '${{ inputs.version }}';
-          fs.writeFileSync('./manifest.json', JSON.stringify(manifest, null, 2) + '\n');
-        "
+        # Only update if version is different
+        if [ "$CURRENT_VERSION" != "${{ inputs.version }}" ]; then
+          echo "Updating version from $CURRENT_VERSION to ${{ inputs.version }}"
+          
+          # Update package.json version
+          npm version ${{ inputs.version }} --no-git-tag-version
+          
+          # Update manifest.json version
+          node -e "
+            const fs = require('fs');
+            const manifest = require('./manifest.json');
+            manifest.version = '${{ inputs.version }}';
+            fs.writeFileSync('./manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+          "
+          
+          # Update options.html version
+          sed -i 's/Relistr v[0-9]\+\.[0-9]\+\.[0-9]\+/Relistr v${{ inputs.version }}/g' options.html
+        else
+          echo "Version is already ${{ inputs.version }}, skipping version update"
+        fi
         
     - name: Build extension
       run: npm run build
@@ -133,8 +146,16 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add package.json manifest.json
-        git commit -m "chore: bump version to ${{ inputs.version }}"
+        
+        # Check if there are any changes to commit
+        if git diff --quiet package.json manifest.json options.html; then
+          echo "No version changes to commit"
+        else
+          git add package.json manifest.json options.html
+          git commit -m "chore: bump version to ${{ inputs.version }}"
+        fi
+        
+        # Always create the tag (even if no version bump)
         git tag v${{ inputs.version }}
         
     - name: Push changes
