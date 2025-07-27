@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Relistr - Sponsored Content Remover",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Remove sponsored listings from websites based on configurable rules",
   "permissions": [
     "storage",
