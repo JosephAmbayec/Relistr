@@ -62,52 +62,54 @@ jobs:
     - name: Build extension
       run: npm run build
       
-    - name: Generate contributors list
+    - name: Generate contributors list  
       id: contributors
       run: |
-        # Get the last release tag
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        # Get the last release tag (excluding the one we're about to create)
+        LAST_TAG=$(git tag -l --sort=-version:refname | grep -v "^v${{ inputs.version }}$" | head -1)
         
         if [ -z "$LAST_TAG" ]; then
-          # If no previous tag, get all commits
-          COMMIT_RANGE=""
+          # If no previous tag, get all commits but exclude the version bump
+          COMMIT_RANGE="HEAD~1"
+          COMMIT_RANGE_DISPLAY="initial commit"
         else
-          # Get commits since last tag
-          COMMIT_RANGE="$LAST_TAG..HEAD"
+          # Get commits since last tag, excluding the version bump commit
+          COMMIT_RANGE="$LAST_TAG..HEAD~1"
+          COMMIT_RANGE_DISPLAY="$LAST_TAG"
         fi
         
         # Generate contributors list with commit counts
         echo "CONTRIBUTORS<<EOF" >> $GITHUB_OUTPUT
-        echo "## Contributors" >> $GITHUB_OUTPUT
+        echo "## 🎉 Contributors" >> $GITHUB_OUTPUT
         echo "" >> $GITHUB_OUTPUT
         echo "Thanks to everyone who contributed to this release:" >> $GITHUB_OUTPUT
         echo "" >> $GITHUB_OUTPUT
         
-        # Get unique authors with commit counts since last release
-        git log $COMMIT_RANGE --pretty=format:"%an <%ae>" | sort | uniq -c | sort -rn | while read count author; do
+        # Get unique authors with commit counts since last release, excluding bot commits
+        git log $COMMIT_RANGE --pretty=format:"%an <%ae>" --grep="chore: bump version" --invert-grep | sort | uniq -c | sort -rn | while read count author; do
           # Extract name and email
           name=$(echo "$author" | sed 's/ <.*//')
           email=$(echo "$author" | sed 's/.*<\(.*\)>.*/\1/')
           
-          # Skip GitHub actions bot
-          if [[ "$email" != "action@github.com" && "$email" != "noreply@github.com" ]]; then
+          # Skip GitHub actions bot and empty lines
+          if [[ -n "$name" && "$email" != "action@github.com" && "$email" != "noreply@github.com" ]]; then
             echo "- **$name** - $count commit(s)" >> $GITHUB_OUTPUT
           fi
         done
         
         echo "" >> $GITHUB_OUTPUT
-        echo "### Release Statistics" >> $GITHUB_OUTPUT
+        echo "### 📊 Release Statistics" >> $GITHUB_OUTPUT
         
-        if [ -n "$COMMIT_RANGE" ]; then
-          total_commits=$(git rev-list --count $COMMIT_RANGE)
-          files_changed=$(git diff --name-only $LAST_TAG..HEAD | wc -l)
-          echo "- **$total_commits** commits since $LAST_TAG" >> $GITHUB_OUTPUT
+        if [ "$COMMIT_RANGE" != "HEAD~1" ]; then
+          total_commits=$(git rev-list --count $COMMIT_RANGE --grep="chore: bump version" --invert-grep)
+          files_changed=$(git diff --name-only $LAST_TAG..HEAD~1 | wc -l)
+          echo "- **$total_commits** commits since $COMMIT_RANGE_DISPLAY" >> $GITHUB_OUTPUT
           echo "- **$files_changed** files changed" >> $GITHUB_OUTPUT
         else
-          total_commits=$(git rev-list --count HEAD)
+          total_commits=$(git rev-list --count HEAD~1)
           files_changed=$(git ls-files | wc -l)
-          echo "- **$total_commits** total commits" >> $GITHUB_OUTPUT
-          echo "- **$files_changed** total files" >> $GITHUB_OUTPUT
+          echo "- **$total_commits** commits in this release" >> $GITHUB_OUTPUT
+          echo "- **$files_changed** total files in project" >> $GITHUB_OUTPUT
         fi
         
         echo "EOF" >> $GITHUB_OUTPUT
@@ -116,16 +118,44 @@ jobs:
       id: changelog
       run: |
         echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-        echo "## [${{ inputs.version }}] - $(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
-        echo "" >> $GITHUB_OUTPUT
-        echo "### Added" >> $GITHUB_OUTPUT
-        echo "- New features and improvements" >> $GITHUB_OUTPUT
-        echo "" >> $GITHUB_OUTPUT
-        echo "### Fixed" >> $GITHUB_OUTPUT
-        echo "- Bug fixes and optimizations" >> $GITHUB_OUTPUT
-        echo "" >> $GITHUB_OUTPUT
-        echo "### Changed" >> $GITHUB_OUTPUT
-        echo "- Updates and modifications" >> $GITHUB_OUTPUT
+        
+        # Try to extract changelog for this version from CHANGELOG.md
+        if [ -f "CHANGELOG.md" ]; then
+          # Extract the section for this version
+          awk "/## \[${{ inputs.version }}\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > temp_changelog.txt
+          
+          if [ -s temp_changelog.txt ]; then
+            echo "## [${{ inputs.version }}] - $(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            cat temp_changelog.txt >> $GITHUB_OUTPUT
+          else
+            # Fallback to generic changelog
+            echo "## [${{ inputs.version }}] - $(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### Added" >> $GITHUB_OUTPUT
+            echo "- New features and improvements" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### Fixed" >> $GITHUB_OUTPUT
+            echo "- Bug fixes and optimizations" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### Changed" >> $GITHUB_OUTPUT
+            echo "- Updates and modifications" >> $GITHUB_OUTPUT
+          fi
+          rm -f temp_changelog.txt
+        else
+          # No CHANGELOG.md file
+          echo "## [${{ inputs.version }}] - $(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Added" >> $GITHUB_OUTPUT
+          echo "- New features and improvements" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Fixed" >> $GITHUB_OUTPUT
+          echo "- Bug fixes and optimizations" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Changed" >> $GITHUB_OUTPUT
+          echo "- Updates and modifications" >> $GITHUB_OUTPUT
+        fi
+        
         echo "EOF" >> $GITHUB_OUTPUT
         
     - name: Create release package

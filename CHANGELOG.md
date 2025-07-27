@@ -5,17 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.1] - 2025-01-27
+## [1.1.2] - 2025-07-27
 
-### Added
-- Badge number on extension icon showing current page removal count
-- Real-time badge updates when switching tabs
-- Smart badge display (only shows when count > 0)
 
 ### Fixed
-- Statistics counting bug - total count now correctly increments by actual removed elements instead of just 1
+- Release workflow version synchronization
 
-## [1.1.0] - 2025-01-27
+## [1.1.1] - 2025-07-27
+
+### Fixed
+- Release workflow version synchronization
+
+## [1.1.0] - 2025-07-27
 
 ### Added
 - Page-specific blocked listings counter in popup alongside total count
@@ -28,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tab-specific statistics storage with automatic cleanup on tab close
 - Message passing system between content script, background, and popup
 
-## [1.0.0] - 2025-01-27
+## [1.0.0] - 2025-07-27
 
 ### Added
 - Initial browser extension for removing sponsored listings and advertisements
