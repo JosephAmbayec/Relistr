@@ -236,15 +236,29 @@ class RelistrDOMManipulator {
     const elements: Element[] = [];
     
     attributes.forEach(attr => {
-      const selector = attr.value === '*' 
-        ? `[${attr.name}]` 
-        : `[${attr.name}="${attr.value}"]`;
-      
-      try {
-        const found = 'querySelectorAll' in root ? 
-          Array.from(root.querySelectorAll(selector)) : [];
-        elements.push(...found);
-      } catch (error) {
+      if (attr.value === '*') {
+        // Find any element with this attribute, regardless of value
+        const selector = `[${attr.name}]`;
+        try {
+          const found = 'querySelectorAll' in root ? 
+            Array.from(root.querySelectorAll(selector)) : [];
+          elements.push(...found);
+        } catch (error) {
+        }
+      } else {
+        const selector = `[${attr.name}]`;
+        try {
+          const candidateElements = 'querySelectorAll' in root ? 
+            Array.from(root.querySelectorAll(selector)) : [];
+          
+          const matchingElements = candidateElements.filter(element => {
+            const attributeValue = element.getAttribute(attr.name) || '';
+            return attributeValue.toLowerCase().includes(attr.value.toLowerCase());
+          });
+          
+          elements.push(...matchingElements);
+        } catch (error) {
+        }
       }
     });
 
