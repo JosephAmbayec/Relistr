@@ -1,0 +1,15 @@
+{
+  "domains": {
+    "amazon.ca": {
+      "selectors": [
+        "[data-component-type='sp-sponsored-result']",
+        ".AdHolder",
+        ".s-sponsored-list-item"
+      ],
+      "textMatches": [
+        "Sponsored",
+        "Promoted"
+      ]
+    }
+  }
+}

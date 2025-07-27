@@ -1,0 +1,38 @@
+{
+  "domains": {
+    "example.com": {
+      "selectors": [
+        "[data-sponsored]",
+        ".sponsored",
+        ".ad-container"
+      ],
+      "textMatches": [
+        "Sponsored",
+        "Advertisement",
+        "Promoted"
+      ],
+      "attributes": [
+        {
+          "name": "data-testid",
+          "value": "sponsored-result"
+        }
+      ]
+    },
+    "amazon.com": {
+      "selectors": [
+        "[data-component-type='sp-sponsored-result']",
+        ".AdHolder",
+        ".s-sponsored-list-item"
+      ],
+      "textMatches": [
+        "Sponsored",
+        "Promoted"
+      ]
+    }
+  },
+  "globalSelectors": [
+    "[data-sponsored='true']",
+    ".sponsored-content",
+    ".advertisement"
+  ]
+}

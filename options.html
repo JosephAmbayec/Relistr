@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relistr Options</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --border: #e2e8f0;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-bg: #fffbeb;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --danger-hover: #dc2626;
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --radius: 8px;
+      --radius-sm: 4px;
+      --radius-lg: 12px;
+    }
+    
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --accent: #60a5fa;
+      --accent-hover: #3b82f6;
+      --success: #34d399;
+      --success-bg: #064e3b;
+      --warning: #fbbf24;
+      --warning-bg: #451a03;
+      --danger: #f87171;
+      --danger-bg: #450a0a;
+      --danger-hover: #ef4444;
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      transition: all 0.2s ease;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius);
+    }
+    
+    .logo-text {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      font-size: 18px;
+      box-shadow: var(--shadow);
+    }
+    
+    .theme-toggle:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .header-content h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+    
+    .header-content p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      transition: all 0.2s ease;
+    }
+    
+    .section:hover {
+      box-shadow: var(--shadow-md);
+    }
+    
+    .section-header {
+      margin-bottom: 24px;
+    }
+    
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    
+    .section-description {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    
+    .setting-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+    }
+    
+    .setting-item:hover {
+      background: var(--bg-tertiary);
+    }
+    
+    .setting-label {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 15px;
+    }
+    
+    .setting-description {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    
+    .switch {
+      position: relative;
+      width: 48px;
+      height: 28px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--border);
+      transition: all 0.3s ease;
+      border-radius: 14px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 2px;
+      bottom: 2px;
+      background: white;
+      transition: all 0.3s ease;
+      border-radius: 50%;
+      box-shadow: var(--shadow);
+    }
+    
+    input:checked + .slider {
+      background: var(--accent);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 48px 24px;
+      text-align: center;
+      background: var(--bg-primary);
+      margin: 24px 0;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .upload-area:hover {
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+    }
+    
+    .upload-area.dragover {
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+      transform: scale(1.02);
+    }
+    
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: var(--text-muted);
+    }
+    
+    .upload-text {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    
+    .file-input {
+      display: none;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .btn-secondary {
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      border-color: var(--border);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    
+    .btn-danger:hover {
+      background: var(--danger-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .json-preview {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-top: 24px;
+      box-shadow: var(--shadow);
+    }
+    
+    .json-preview h4 {
+      margin-bottom: 16px;
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .json-content {
+      font-family: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      max-height: 300px;
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    
+    .custom-rules-list {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-height: 400px;
+      overflow-y: auto;
+      box-shadow: var(--shadow);
+    }
+    
+    .custom-rule-item {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      transition: all 0.2s ease;
+    }
+    
+    .custom-rule-item:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .custom-rule-item:last-child {
+      border-bottom: none;
+    }
+    
+    .rule-info {
+      flex: 1;
+    }
+    
+    .rule-domain {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    
+    .rule-summary {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .delete-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      background: var(--danger);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+    
+    .delete-btn:hover {
+      background: var(--danger-hover);
+      transform: translateY(-1px);
+    }
+    
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .json-preview-hidden {
+      display: none;
+    }
+    
+    .status-message {
+      padding: 16px 20px;
+      border-radius: var(--radius);
+      margin-top: 24px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .status-hidden {
+      display: none;
+    }
+    
+    .status-success {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+    
+    .status-error {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .about-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    
+    .about-item {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    
+    .about-item:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .about-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+    
+    .about-content {
+      flex: 1;
+    }
+    
+    .about-content h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    
+    .about-content p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    
+    .version-info {
+      text-align: center;
+      padding: 24px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-top: 20px;
+    }
+    
+    .version-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    
+    .version-subtext {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.4s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px 16px;
+      }
+      
+      .section {
+        padding: 24px 20px;
+      }
+      
+      .header-top {
+        flex-direction: column;
+        gap: 20px;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+      }
+      
+      .about-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .about-item {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="container fade-in">
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">
+          <img src="icons/icon-64.png" alt="Relistr Logo" class="logo-icon">
+          <div class="logo-text">Relistr</div>
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+          <span id="themeIcon">🌙</span>
+        </button>
+      </div>
+      <div class="header-content">
+        <h1>Advanced Options</h1>
+        <p>Configure your sponsored content removal settings and manage custom rules</p>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">General Settings</h3>
+        <p class="section-description">Core extension behavior and preferences</p>
+      </div>
+      
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Use Global Selectors</div>
+          <div class="setting-description">Apply universal ad-blocking rules across all websites</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="enableGlobalSelectors">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Custom Selector Rules</h3>
+        <p class="section-description">Upload JSON files with domain-specific blocking rules</p>
+      </div>
+      
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📂</div>
+        <div class="upload-text">Drag and drop a JSON file here or click to select</div>
+        <button class="btn btn-primary" id="chooseFileBtn">
+          <span>📄</span>
+          Choose File
+        </button>
+        <input type="file" id="fileInput" class="file-input" accept=".json">
+      </div>
+      
+      <div id="jsonPreview" class="json-preview json-preview-hidden">
+        <h4>JSON Preview</h4>
+        <pre id="jsonContent" class="json-content"></pre>
+      </div>
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="importBtn">
+          <span>💾</span>
+          Import Rules
+        </button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Current Custom Rules</h3>
+        <p class="section-description">Manage your imported domain-specific rules</p>
+      </div>
+      
+      <div id="customRulesList" class="custom-rules-list">
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <div>No custom rules loaded</div>
+        </div>
+      </div>
+      
+      <div class="action-buttons">
+        <button class="btn btn-danger" id="clearAllBtn">
+          <span>🗑️</span>
+          Clear All Custom Rules
+        </button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">About & Support</h3>
+        <p class="section-description">Project information, documentation, and community resources</p>
+      </div>
+      
+      <div class="about-grid">
+        <div class="about-item">
+          <div class="about-icon">📖</div>
+          <div class="about-content">
+            <h4>Documentation</h4>
+            <p>View the complete project documentation and setup guides</p>
+            <a href="https://github.com/JosephAmbayec/Relistr#readme" target="_blank" class="btn btn-secondary">
+              <span>📚</span>
+              View README
+            </a>
+          </div>
+        </div>
+        
+        <div class="about-item">
+          <div class="about-icon">🐛</div>
+          <div class="about-content">
+            <h4>Report Issues</h4>
+            <p>Found a bug or have a feature request? Let us know!</p>
+            <a href="https://github.com/JosephAmbayec/Relistr/issues" target="_blank" class="btn btn-secondary">
+              <span>🔗</span>
+              GitHub Issues
+            </a>
+          </div>
+        </div>
+        
+        <div class="about-item">
+          <div class="about-icon">💾</div>
+          <div class="about-content">
+            <h4>Source Code</h4>
+            <p>View and contribute to the open source project</p>
+            <a href="https://github.com/JosephAmbayec/Relistr" target="_blank" class="btn btn-secondary">
+              <span>⭐</span>
+              View on GitHub
+            </a>
+          </div>
+        </div>
+        
+        <div class="about-item">
+          <div class="about-icon">📋</div>
+          <div class="about-content">
+            <h4>Version History</h4>
+            <p>See what's new in each release and update notes</p>
+            <a href="https://github.com/JosephAmbayec/Relistr/blob/main/CHANGELOG.md" target="_blank" class="btn btn-secondary">
+              <span>📝</span>
+              View Changelog
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="version-info">
+        <div class="version-text">Relistr v1.0.0</div>
+        <div class="version-subtext">Built with ❤️ by Joseph Ambayec for a cleaner web experience</div>
+      </div>
+    </div>
+    
+    <div id="statusMessage" class="status-message status-hidden"></div>
+  </div>
+  
+  <script src="dist/options.js"></script>
+</body>
+</html>

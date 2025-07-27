@@ -1,0 +1,69 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2025-01-27
+
+### Added
+- Initial browser extension for removing sponsored listings and advertisements
+- Support for multiple detection methods: CSS selectors, text matching, HTML attributes
+- Domain-specific configuration system via JSON files
+- TypeScript implementation with full type safety
+- Extension popup with basic controls and domain status indicator
+- Advanced options page with custom rules management
+- File upload functionality for custom selector rules
+- Persistent settings using Chrome Storage API
+- Real-time DOM manipulation with MutationObserver
+- Debug logging and console helpers for troubleshooting
+- Complete open source project setup with MIT license
+- Automated CI/CD pipeline with GitHub Actions
+- Chrome Web Store deployment automation
+- Comprehensive documentation and contributing guidelines
+
+### Fixed
+- TypeScript compilation issues caused by incorrect module configuration
+- Content Security Policy violations from inline event handlers
+- Custom rules not applying due to build system failures
+- File upload button not opening file explorer
+- Domain normalization issues with www prefixes and case sensitivity
+- Storage synchronization across extension components
+
+### Technical Details
+- Manifest V3 compliance for modern Chrome extensions
+- TypeScript compilation with proper module system (CommonJS)
+- CSP-compliant event handling and styling
+- Robust error handling and validation
+- Version synchronization between package.json and manifest.json
+- Automated testing and build verification
+- Cross-platform build scripts and packaging
+
+## Development History
+
+### v0.4.0 - Open Source Setup
+- Repository structure and documentation
+- CI/CD workflows and automation
+- Chrome Web Store deployment pipeline
+- Versioning and release management
+
+### v0.3.0 - Custom Rules System
+- Advanced options page implementation
+- File upload for custom selector rules
+- Persistent storage for user configurations
+- Debug tools and console helpers
+
+### v0.2.0 - TypeScript Migration
+- Full codebase conversion to TypeScript
+- Type definitions and interfaces
+- Build system configuration
+- Fixed compilation and module issues
+
+### v0.1.0 - Initial Prototype
+- Basic extension scaffolding
+- Core DOM manipulation functionality
+- JSON configuration system
+- Popup interface and basic controls
+
+[1.0.0]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.0.0

@@ -1,0 +1,176 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Type check
+      run: npm run lint
+      
+    - name: Build extension
+      run: npm run build
+      
+    - name: Verify build output
+      run: |
+        ls -la dist/
+        test -f dist/content.js
+        test -f dist/background.js
+        test -f dist/popup.js
+        test -f dist/options.js
+        
+    - name: Check file sizes
+      run: |
+        echo "Content script size: $(wc -c < dist/content.js) bytes"
+        echo "Background script size: $(wc -c < dist/background.js) bytes"
+        echo "Popup script size: $(wc -c < dist/popup.js) bytes"
+        echo "Options script size: $(wc -c < dist/options.js) bytes"
+        
+    - name: Validate manifest
+      run: |
+        node -e "
+          const manifest = require('./manifest.json');
+          const package = require('./package.json');
+          
+          console.log('Manifest version:', manifest.version);
+          console.log('Package version:', package.version);
+          
+          if (manifest.version !== package.version) {
+            console.error('Version mismatch!');
+            process.exit(1);
+          }
+          
+          // Validate required fields
+          const required = ['manifest_version', 'name', 'version', 'description'];
+          for (const field of required) {
+            if (!manifest[field]) {
+              console.error(\`Missing required field: \${field}\`);
+              process.exit(1);
+            }
+          }
+          
+          console.log('✅ Manifest validation passed');
+        "
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-build-${{ matrix.node-version }}
+        path: |
+          dist/
+          manifest.json
+          popup.html
+          options.html
+          config.json
+          test-custom-selectors.json
+          icons/
+        retention-days: 30
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build extension
+      run: npm run build
+      
+    - name: Create package
+      run: npm run package
+      
+    - name: Create release zip
+      run: |
+        mkdir -p releases
+        zip -r releases/relistr-${{ github.event.release.tag_name || 'latest' }}.zip \
+          manifest.json \
+          popup.html \
+          options.html \
+          config.json \
+          test-custom-selectors.json \
+          dist/ \
+          icons/ \
+          README.md \
+          LICENSE
+          
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: relistr-extension-${{ github.event.release.tag_name || 'latest' }}
+        path: releases/
+        
+    - name: Upload to release (if release event)
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: releases/relistr-${{ github.event.release.tag_name }}.zip
+        asset_name: relistr-${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip
+
+  chrome-web-store:
+    needs: package
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    
+    steps:
+    - name: Download release artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: relistr-extension-${{ github.event.release.tag_name }}
+        path: releases/
+        
+    - name: Publish to Chrome Web Store
+      if: secrets.CHROME_EXTENSION_ID && secrets.CHROME_CLIENT_ID && secrets.CHROME_CLIENT_SECRET && secrets.CHROME_REFRESH_TOKEN
+      uses: mnao305/chrome-extension-upload@v4.0.1
+      with:
+        file-path: releases/relistr-${{ github.event.release.tag_name }}.zip
+        extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+        client-id: ${{ secrets.CHROME_CLIENT_ID }}
+        client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+        refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        publish: true
+        
+    - name: Notify deployment
+      if: success()
+      run: |
+        echo "🎉 Successfully deployed to Chrome Web Store!"
+        echo "Version: ${{ github.event.release.tag_name }}"
+        echo "Extension URL: https://chrome.google.com/webstore/detail/${{ secrets.CHROME_EXTENSION_ID }}"

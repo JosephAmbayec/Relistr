@@ -1,0 +1,184 @@
+# Contributing to Relistr
+
+Thank you for your interest in contributing to Relistr! This document provides guidelines and information for contributors.
+
+## Code of Conduct
+
+By participating in this project, you agree to abide by our Code of Conduct. Please be respectful and constructive in all interactions.
+
+## How to Contribute
+
+### Reporting Bugs
+
+1. **Search existing issues** first to avoid duplicates
+2. **Use the bug report template** when creating new issues
+3. **Provide detailed information**:
+   - Browser version and OS
+   - Extension version
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Screenshots are helpful!
+
+### Suggesting Features
+
+1. **Check existing discussions** for similar ideas
+2. **Use the feature request template**
+3. **Explain the use case** and benefits
+4. **Consider implementation complexity**
+
+### Adding Website Support
+
+To add blocking rules for a new website:
+
+1. **Research the website structure**:
+   - Identify sponsored content elements
+   - Note CSS classes, IDs, and attributes
+   - Test different pages and layouts
+
+2. **Create rules**:
+   ```json
+   {
+     "domains": {
+       "newsite.com": {
+         "selectors": [
+           ".sponsored-item",
+           "[data-ad-type='sponsored']"
+         ],
+         "textMatches": [
+           "Sponsored",
+           "Promoted"
+         ],
+         "attributes": [
+           {
+             "name": "data-testid",
+             "value": "ad-banner"
+           }
+         ]
+       }
+     }
+   }
+   ```
+
+3. **Test thoroughly**:
+   - Test on multiple pages
+   - Verify it doesn't break legitimate content
+   - Check performance impact
+   - Actually use it as a custom rule config first, then continue
+
+4. **Submit a pull request** with your changes
+
+### Development Setup
+
+1. **Fork and clone**:
+   ```bash
+   git clone https://github.com/JosephAmbayec/Relistr.git
+   cd Relistr
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start development**:
+   ```bash
+   npm run watch  # Auto-rebuild on changes
+   ```
+
+4. **Load extension in Chrome**:
+   - Go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the project folder
+
+### Pull Request Process
+
+1. **Create a feature branch**:
+   ```bash
+   git checkout -b feature/description
+   ```
+
+2. **Make your changes**:
+   - Follow the existing code style
+   - Add TypeScript types where needed
+   - Test your changes thoroughly
+
+3. **Build and test**:
+   ```bash
+   npm run build
+   ```
+
+4. **Commit with clear messages**:
+   ```bash
+   git commit -m "feat: add support for example.com"
+   ```
+
+5. **Push and create PR**:
+   ```bash
+   git push origin feature/description
+   ```
+
+6. **Fill out the PR template** with:
+   - Description of changes
+   - Testing performed
+   - Screenshots if UI changes
+   - Breaking changes (if any)
+
+### Code Style Guidelines
+
+- **TypeScript**: Use strict typing, avoid `any` when possible
+- **Naming**: Use descriptive variable and function names
+- **Comments**: Add comments for complex logic only
+- **Formatting**: Use the existing indentation and style
+- **Error Handling**: Always include proper error handling
+
+### Project Structure
+
+```
+src/
+├── content.ts     # Main content script - blocking logic
+├── background.ts  # Service worker - settings management
+├── popup.ts       # Extension popup interface
+├── options.ts     # Advanced options page
+└── types.ts       # Shared TypeScript types
+```
+
+### Testing Guidelines
+
+1. **Manual Testing**:
+   - Test on target websites
+   - Verify popup functionality
+   - Test options page import/export
+   - Check performance impact
+
+2. **Cross-Browser Testing**:
+   - Primary: Chrome/Chromium
+   - Secondary: Edge, Firefox (if supported)
+
+3. **Rule Testing**:
+   - Test with global selectors on/off
+   - Test custom rules upload
+   - Verify statistics tracking
+
+### Release Process
+
+1. **Version bump** in `package.json` and `manifest.json`
+2. **Update CHANGELOG.md** with new features/fixes
+3. **Create release PR** to main branch
+4. **Tag release** after merge
+5. **GitHub Actions** handles building and publishing
+
+### Questions?
+
+- 💬 **Discussions**: Use GitHub Discussions for questions
+- 🐛 **Issues**: Use GitHub Issues for bugs
+- 📧 **Email**: Contact maintainers for security issues
+
+## Recognition
+
+Contributors will be:
+- Listed in CHANGELOG.md for their contributions
+- Mentioned in release notes
+- Added to the contributors section (if significant contributions)
+
+Thank you for helping make the web a cleaner place! 🎉

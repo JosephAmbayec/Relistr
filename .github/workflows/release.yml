@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Update version
+      run: |
+        # Update package.json version
+        npm version ${{ inputs.version }} --no-git-tag-version
+        
+        # Update manifest.json version
+        node -e "
+          const fs = require('fs');
+          const manifest = require('./manifest.json');
+          manifest.version = '${{ inputs.version }}';
+          fs.writeFileSync('./manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+        "
+        
+    - name: Build extension
+      run: npm run build
+      
+    - name: Generate changelog entry
+      id: changelog
+      run: |
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        echo "## [${{ inputs.version }}] - $(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "### Added" >> $GITHUB_OUTPUT
+        echo "- New features and improvements" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "### Fixed" >> $GITHUB_OUTPUT
+        echo "- Bug fixes and optimizations" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "### Changed" >> $GITHUB_OUTPUT
+        echo "- Updates and modifications" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Create release package
+      run: |
+        mkdir -p releases
+        zip -r releases/relistr-${{ inputs.version }}.zip \
+          manifest.json \
+          popup.html \
+          options.html \
+          config.json \
+          test-custom-selectors.json \
+          dist/ \
+          icons/ \
+          README.md \
+          LICENSE
+          
+    - name: Commit version changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add package.json manifest.json
+        git commit -m "chore: bump version to ${{ inputs.version }}"
+        git tag v${{ inputs.version }}
+        
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tags: true
+        
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ inputs.version }}
+        release_name: Relistr v${{ inputs.version }}
+        body: |
+          ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ## Installation
+          
+          ### Chrome Web Store
+          Install from the [Chrome Web Store](https://chrome.google.com/webstore/detail/relistr/{extension-id-will-add})
+          
+          ### Manual Installation
+          1. Download the `relistr-${{ inputs.version }}.zip` file below
+          2. Extract the contents
+          3. Load the extension in Chrome:
+             - Go to `chrome://extensions/`
+             - Enable "Developer mode"
+             - Click "Load unpacked" and select the extracted folder
+          
+          ## What's New
+          
+          See the full changelog at [CHANGELOG.md](https://github.com/JosephAmbayec/Relistr/blob/main/CHANGELOG.md)
+          
+        draft: false
+        prerelease: ${{ inputs.prerelease }}
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: releases/relistr-${{ inputs.version }}.zip
+        asset_name: relistr-${{ inputs.version }}.zip
+        asset_content_type: application/zip
+        
+    - name: Trigger Chrome Web Store deployment
+      if: ${{ !inputs.prerelease }}
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        event-type: chrome-web-store-deploy
+        client-payload: '{"version": "${{ inputs.version }}"}'

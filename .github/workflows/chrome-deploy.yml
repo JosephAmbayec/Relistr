@@ -1,0 +1,103 @@
+name: Chrome Web Store Deploy
+
+on:
+  repository_dispatch:
+    types: [chrome-web-store-deploy]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: v${{ github.event.client_payload.version || inputs.version }}
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build extension
+      run: npm run build
+      
+    - name: Create deployment package
+      run: |
+        mkdir -p chrome-deploy
+        zip -r chrome-deploy/extension.zip \
+          manifest.json \
+          popup.html \
+          options.html \
+          config.json \
+          dist/ \
+          icons/
+          
+    - name: Validate package
+      run: |
+        echo "Package size: $(du -h chrome-deploy/extension.zip | cut -f1)"
+        unzip -l chrome-deploy/extension.zip
+        
+    - name: Deploy to Chrome Web Store
+      if: secrets.CHROME_EXTENSION_ID && secrets.CHROME_CLIENT_ID && secrets.CHROME_CLIENT_SECRET && secrets.CHROME_REFRESH_TOKEN
+      uses: mnao305/chrome-extension-upload@v4.0.1
+      with:
+        file-path: chrome-deploy/extension.zip
+        extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+        client-id: ${{ secrets.CHROME_CLIENT_ID }}
+        client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+        refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        publish: true
+        
+    - name: Create deployment summary
+      run: |
+        cat << EOF >> $GITHUB_STEP_SUMMARY
+        ## 🚀 Chrome Web Store Deployment
+        
+        **Version:** ${{ github.event.client_payload.version || inputs.version }}
+        **Status:** ✅ Deployed Successfully
+        **Extension ID:** \`${{ secrets.CHROME_EXTENSION_ID }}\`
+        **Store URL:** https://chrome.google.com/webstore/detail/${{ secrets.CHROME_EXTENSION_ID }}
+        
+        ### Package Details
+        - **Size:** $(du -h chrome-deploy/extension.zip | cut -f1)
+        - **Files:** $(unzip -l chrome-deploy/extension.zip | wc -l) files
+        - **Build Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        
+        ### Next Steps
+        - The extension is now live on the Chrome Web Store
+        - It may take a few hours to appear for all users
+        - Monitor the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) for review status
+        EOF
+        
+    - name: Notify on failure
+      if: failure()
+      run: |
+        cat << EOF >> $GITHUB_STEP_SUMMARY
+        ## ❌ Chrome Web Store Deployment Failed
+        
+        **Version:** ${{ github.event.client_payload.version || inputs.version }}
+        **Status:** Failed
+        
+        ### Possible Issues
+        - Check Chrome Web Store API credentials in repository secrets
+        - Verify extension package meets Web Store requirements
+        - Review manifest.json for policy violations
+        - Check deployment logs above for specific errors
+        
+        ### Required Secrets
+        - \`CHROME_EXTENSION_ID\`: Your extension's ID from Chrome Web Store
+        - \`CHROME_CLIENT_ID\`: OAuth client ID from Google Cloud Console
+        - \`CHROME_CLIENT_SECRET\`: OAuth client secret
+        - \`CHROME_REFRESH_TOKEN\`: OAuth refresh token for authentication
+        EOF

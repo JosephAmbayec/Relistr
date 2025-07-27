@@ -1,0 +1,59 @@
+{
+  "name": "relistr",
+  "version": "1.0.0",
+  "description": "A browser extension that removes sponsored listings and advertisements from websites using configurable CSS selectors, text matching, and attribute detection",
+  "main": "dist/background.js",
+  "scripts": {
+    "build": "npm run clean && tsc && npm run copy-assets",
+    "watch": "tsc --watch & npm run copy-assets",
+    "copy-assets": "node scripts/copy-assets.js",
+    "clean": "rimraf dist",
+    "lint": "tsc --noEmit",
+    "package": "npm run build && node scripts/package.js",
+    "release": "npm run build && npm run package"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JosephAmbayec/Relistr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JosephAmbayec/Relistr/issues"
+  },
+  "homepage": "https://github.com/JosephAmbayec/Relistr#readme",
+  "author": {
+    "name": "Relistr Contributors",
+    "url": "https://github.com/JosephAmbayec/Relistr/contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "browser-extension",
+    "ad-blocker", 
+    "sponsored-content",
+    "chrome-extension",
+    "privacy",
+    "content-filtering",
+    "css-selectors",
+    "ad-removal",
+    "typescript",
+    "open-source"
+  ],
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.3.3",
+    "rimraf": "^5.0.5"
+  },
+  "files": [
+    "dist/",
+    "manifest.json",
+    "popup.html",
+    "options.html",
+    "config.json",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
+}
