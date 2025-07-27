@@ -140,13 +140,28 @@ class RelistrOptions {
           <div class="rule-domain">${domain}</div>
           <div class="rule-summary">${this.getRuleSummary(rules[domain])}</div>
         </div>
-        <button class="delete-btn" data-domain="${domain}">
-          Delete
-        </button>
+        <div class="rule-actions">
+          <button class="edit-btn" data-domain="${domain}">
+            Edit
+          </button>
+          <button class="delete-btn" data-domain="${domain}">
+            Delete
+          </button>
+        </div>
       </div>
     `).join('');
 
-    // Add event listeners to delete buttons
+    // Add event listeners to edit and delete buttons
+    const editButtons = container.querySelectorAll('.edit-btn');
+    editButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const domain = (e.target as HTMLButtonElement).getAttribute('data-domain');
+        if (domain) {
+          this.editCustomRule(domain);
+        }
+      });
+    });
+
     const deleteButtons = container.querySelectorAll('.delete-btn');
     deleteButtons.forEach(button => {
       button.addEventListener('click', (e) => {
@@ -212,6 +227,9 @@ class RelistrOptions {
       });
     }
 
+    // Edit modal events
+    this.bindEditModalEvents();
+
     // Global selectors toggle
     const globalSelectorsToggle = document.getElementById('enableGlobalSelectors') as HTMLInputElement;
     if (globalSelectorsToggle) {
@@ -269,6 +287,12 @@ class RelistrOptions {
     const importBtn = document.getElementById('importBtn') as HTMLButtonElement;
     if (importBtn) {
       importBtn.addEventListener('click', this.importRules.bind(this));
+    }
+
+    // Export button
+    const exportBtn = document.getElementById('exportBtn') as HTMLButtonElement;
+    if (exportBtn) {
+      exportBtn.addEventListener('click', this.exportRules.bind(this));
     }
 
     // Clear all button
@@ -392,6 +416,43 @@ class RelistrOptions {
     }
   }
 
+  private exportRules(): void {
+    const customRules = this.settings.customRules || {};
+    const domains = Object.keys(customRules);
+
+    if (domains.length === 0) {
+      this.showStatus('No custom rules to export', 'error');
+      return;
+    }
+
+    // Create export object in the same format as import
+    const exportData = {
+      domains: customRules
+    };
+
+    // Convert to JSON string
+    const jsonString = JSON.stringify(exportData, null, 2);
+
+    // Create blob and download
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create temporary download link
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `relistr-custom-rules-${new Date().toISOString().split('T')[0]}.json`;
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    URL.revokeObjectURL(url);
+    
+    this.showStatus(`Exported ${domains.length} custom rules`, 'success');
+  }
+
   private showStatus(message: string, type: 'success' | 'error'): void {
     const statusDiv = document.getElementById('statusMessage') as HTMLDivElement;
     if (statusDiv) {
@@ -436,6 +497,231 @@ class RelistrOptions {
       await this.saveSettings();
       this.updateWhitelistUI();
       this.showStatus(`Removed ${domain} from whitelist`, 'success');
+    }
+  }
+
+  private bindEditModalEvents(): void {
+    const modal = document.getElementById('editRuleModal') as HTMLDivElement;
+    const closeBtn = document.getElementById('closeEditModal') as HTMLButtonElement;
+    const cancelBtn = document.getElementById('cancelEdit') as HTMLButtonElement;
+    const form = document.getElementById('editRuleForm') as HTMLFormElement;
+    const addAttributeBtn = document.getElementById('addAttributeBtn') as HTMLButtonElement;
+
+    // Close modal events
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.closeEditModal());
+    }
+    
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => this.closeEditModal());
+    }
+
+    // Close modal when clicking outside
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          this.closeEditModal();
+        }
+      });
+    }
+
+    // Form submission
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.saveEditedRule();
+      });
+    }
+
+    // Add attribute button
+    if (addAttributeBtn) {
+      addAttributeBtn.addEventListener('click', () => {
+        this.addAttributeEntry();
+      });
+    }
+
+    // Escape key to close modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeEditModal();
+      }
+    });
+  }
+
+  private editCustomRule(domain: string): void {
+    const rule = this.settings.customRules[domain];
+    if (!rule) {
+      this.showStatus('Rule not found', 'error');
+      return;
+    }
+
+    // Populate form fields
+    const domainInput = document.getElementById('editDomain') as HTMLInputElement;
+    const selectorsTextarea = document.getElementById('editSelectors') as HTMLTextAreaElement;
+    const textMatchesTextarea = document.getElementById('editTextMatches') as HTMLTextAreaElement;
+
+    if (domainInput) domainInput.value = domain;
+    if (selectorsTextarea) selectorsTextarea.value = (rule.selectors || []).join('\n');
+    if (textMatchesTextarea) textMatchesTextarea.value = (rule.textMatches || []).join('\n');
+
+    // Populate attributes form
+    this.clearAttributesContainer();
+    if (rule.attributes && Array.isArray(rule.attributes)) {
+      rule.attributes.forEach((attr: {name: string, value: string}) => {
+        this.addAttributeEntry(attr.name, attr.value);
+      });
+    }
+
+    // Show modal
+    this.showEditModal();
+  }
+
+  private showEditModal(): void {
+    const modal = document.getElementById('editRuleModal') as HTMLDivElement;
+    if (modal) {
+      modal.classList.remove('modal-hidden');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  private closeEditModal(): void {
+    const modal = document.getElementById('editRuleModal') as HTMLDivElement;
+    if (modal) {
+      modal.classList.add('modal-hidden');
+      document.body.style.overflow = '';
+    }
+  }
+
+  private clearAttributesContainer(): void {
+    const container = document.getElementById('attributesContainer') as HTMLDivElement;
+    if (container) {
+      container.innerHTML = '<div class="attributes-empty">No attributes defined</div>';
+    }
+  }
+
+  private addAttributeEntry(name: string = '', value: string = ''): void {
+    const container = document.getElementById('attributesContainer') as HTMLDivElement;
+    if (!container) return;
+
+    // Remove empty message if it exists
+    const emptyMessage = container.querySelector('.attributes-empty');
+    if (emptyMessage) {
+      emptyMessage.remove();
+    }
+
+    // Create attribute entry element
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'attribute-entry';
+    
+    const entryId = Date.now() + Math.random(); // Unique ID for this entry
+    
+    entryDiv.innerHTML = `
+      <div class="attribute-field">
+        <label>Attribute Name:</label>
+        <input type="text" class="attribute-name" value="${name}" placeholder="e.g., data-testid, class, title">
+      </div>
+      <div class="attribute-field">
+        <label>Value:</label>
+        <input type="text" class="attribute-value" value="${value}" placeholder="e.g., sponsored, ad">
+      </div>
+      <button type="button" class="remove-attribute-btn" title="Remove attribute">
+        ✕
+      </button>
+    `;
+
+    // Add event listener to remove button
+    const removeBtn = entryDiv.querySelector('.remove-attribute-btn') as HTMLButtonElement;
+    removeBtn.addEventListener('click', () => {
+      entryDiv.remove();
+      // Add empty message if no entries left
+      const remainingEntries = container.querySelectorAll('.attribute-entry');
+      if (remainingEntries.length === 0) {
+        container.innerHTML = '<div class="attributes-empty">No attributes defined</div>';
+      }
+    });
+
+    container.appendChild(entryDiv);
+  }
+
+  private removeAttributeEntry(entryElement: HTMLElement): void {
+    const container = document.getElementById('attributesContainer') as HTMLDivElement;
+    entryElement.remove();
+    
+    // Add empty message if no entries left
+    if (container && container.children.length === 0) {
+      container.innerHTML = '<div class="attributes-empty">No attributes defined</div>';
+    }
+  }
+
+  private getAttributesFromForm(): Array<{name: string, value: string}> {
+    const container = document.getElementById('attributesContainer') as HTMLDivElement;
+    if (!container) return [];
+
+    const entries = container.querySelectorAll('.attribute-entry');
+    const attributes: Array<{name: string, value: string}> = [];
+
+    entries.forEach(entry => {
+      const nameInput = entry.querySelector('.attribute-name') as HTMLInputElement;
+      const valueInput = entry.querySelector('.attribute-value') as HTMLInputElement;
+      
+      const name = nameInput?.value?.trim();
+      const value = valueInput?.value?.trim();
+      
+      if (name && value) {
+        attributes.push({ name, value });
+      }
+    });
+
+    return attributes;
+  }
+
+  private async saveEditedRule(): Promise<void> {
+    const domainInput = document.getElementById('editDomain') as HTMLInputElement;
+    const selectorsTextarea = document.getElementById('editSelectors') as HTMLTextAreaElement;
+    const textMatchesTextarea = document.getElementById('editTextMatches') as HTMLTextAreaElement;
+
+    const domain = domainInput?.value?.trim();
+    if (!domain) {
+      this.showStatus('Domain is required', 'error');
+      return;
+    }
+
+    try {
+      const rule: any = {};
+
+      // Parse selectors
+      const selectorsText = selectorsTextarea?.value?.trim();
+      if (selectorsText) {
+        rule.selectors = selectorsText.split('\n').map(s => s.trim()).filter(s => s);
+      }
+
+      // Parse text matches
+      const textMatchesText = textMatchesTextarea?.value?.trim();
+      if (textMatchesText) {
+        rule.textMatches = textMatchesText.split('\n').map(s => s.trim()).filter(s => s);
+      }
+
+      // Parse attributes from form
+      const attributes = this.getAttributesFromForm();
+      if (attributes.length > 0) {
+        rule.attributes = attributes;
+      }
+
+      // Validate that at least one rule type is provided
+      if (!rule.selectors?.length && !rule.textMatches?.length && !rule.attributes?.length) {
+        this.showStatus('At least one rule type (selectors, text matches, or attributes) is required', 'error');
+        return;
+      }
+
+      // Save the rule
+      this.settings.customRules[domain] = rule;
+      await this.saveSettings();
+      this.updateCustomRulesList();
+      this.closeEditModal();
+      this.showStatus(`Updated rules for ${domain}`, 'success');
+
+    } catch (error) {
+      this.showStatus('Failed to save rule', 'error');
     }
   }
 }
