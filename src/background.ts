@@ -1,7 +1,9 @@
 // Types defined inline to avoid module imports
 interface RelistrSettings {
   enabled: boolean;
+  useGlobalSelectors: boolean;
   customRules: Record<string, any>;
+  whitelist: string[];
   stats: {
     totalRemoved: number;
     lastReset: number;
@@ -33,6 +35,7 @@ class RelistrBackground {
     chrome.storage.onChanged.addListener(this.handleStorageChange.bind(this));
     chrome.tabs.onRemoved.addListener(this.handleTabRemoved.bind(this));
     chrome.tabs.onActivated.addListener(this.handleTabActivated.bind(this));
+    chrome.tabs.onUpdated.addListener(this.handleTabUpdated.bind(this));
     
     // Update icon on startup
     this.updateIcon();
@@ -49,6 +52,7 @@ class RelistrBackground {
       enabled: true,
       useGlobalSelectors: true,
       customRules: {},
+      whitelist: [],
       stats: {
         totalRemoved: 0,
         lastReset: Date.now()
@@ -137,8 +141,16 @@ class RelistrBackground {
   }
 
   private handleStorageChange(changes: { [key: string]: chrome.storage.StorageChange }, namespace: string): void {
-    if (namespace === 'sync' && changes.enabled) {
+    if (namespace === 'sync' && (changes.enabled || changes.whitelist)) {
       this.updateIcon();
+      // Also update badge for current tab if whitelist changed
+      if (changes.whitelist) {
+        chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+          if (tab?.id) {
+            this.updateBadge(tab.id);
+          }
+        });
+      }
     }
   }
 
@@ -147,15 +159,69 @@ class RelistrBackground {
   }
 
   private handleTabActivated(activeInfo: chrome.tabs.TabActiveInfo): void {
-    this.updateBadge(activeInfo.tabId);
+    // Add a small delay to ensure tab is fully loaded
+    setTimeout(() => {
+      this.updateBadge(activeInfo.tabId);
+      this.updateIcon();
+    }, 100);
+  }
+
+  private handleTabUpdated(tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab): void {
+    if (changeInfo.url) {
+      this.updateIcon();
+      this.updateBadge(tabId);
+    }
+  }
+
+  private normalizeDomain(hostname: string): string {
+    return hostname.replace(/^www\./, '').toLowerCase();
+  }
+
+  private async isTabWhitelisted(tabId: number): Promise<boolean> {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      if (!tab.url) return false;
+      
+      // Skip chrome:// and extension pages
+      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        return false;
+      }
+      
+      const url = new URL(tab.url);
+      const domain = this.normalizeDomain(url.hostname);
+      
+      const settings = await chrome.storage.sync.get(['whitelist']);
+      const whitelist = settings.whitelist || [];
+      
+      const isWhitelisted = whitelist.some((whitelistDomain: string) => 
+        domain === whitelistDomain || domain.endsWith('.' + whitelistDomain)
+      );
+      
+      
+      return isWhitelisted;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  private async isCurrentTabWhitelisted(): Promise<boolean> {
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!activeTab?.id || !activeTab?.url) return false;
+      
+      return await this.isTabWhitelisted(activeTab.id);
+    } catch (error) {
+      return false;
+    }
   }
 
   private async updateBadge(tabId: number): Promise<void> {
     try {
       const settings = await chrome.storage.sync.get(['enabled']);
       const isEnabled = settings.enabled !== false;
+      const isWhitelisted = await this.isTabWhitelisted(tabId);
       
-      if (!isEnabled) {
+      if (!isEnabled || isWhitelisted) {
         await chrome.action.setBadgeText({ text: '', tabId });
         return;
       }
@@ -176,39 +242,43 @@ class RelistrBackground {
     try {
       const settings = await chrome.storage.sync.get(['enabled']);
       const isEnabled = settings.enabled !== false;
+      const isCurrentTabWhitelisted = await this.isCurrentTabWhitelisted();
       
-      const iconPath = isEnabled 
+      // Show disabled icon if extension is disabled OR current tab is whitelisted
+      const shouldShowDisabled = !isEnabled || isCurrentTabWhitelisted;
+      
+      const iconPath = shouldShowDisabled 
         ? {
-            "16": "icons/icon-16.png",
-            "32": "icons/icon-32.png",
-            "48": "icons/icon-48.png",
-            "128": "icons/icon-128.png"
-          }
-        : {
             "16": "icons/icon-16-disabled.png",
             "32": "icons/icon-32-disabled.png", 
             "48": "icons/icon-48-disabled.png",
             "128": "icons/icon-128-disabled.png"
+          }
+        : {
+            "16": "icons/icon-16.png",
+            "32": "icons/icon-32.png",
+            "48": "icons/icon-48.png",
+            "128": "icons/icon-128.png"
           };
-
       await chrome.action.setIcon({ path: iconPath });
       
       // Clear badges when disabled, or maintain current badge when enabled
-      if (!isEnabled) {
+      if (shouldShowDisabled) {
         await chrome.action.setBadgeText({ text: '' });
       }
       
     } catch (error) {
-      console.log(error)
       // Fallback - use badge if icons aren't available yet
       const settings = await chrome.storage.sync.get(['enabled']);
       const isEnabled = settings.enabled !== false;
+      const isCurrentTabWhitelisted = await this.isCurrentTabWhitelisted();
+      const shouldShowDisabled = !isEnabled || isCurrentTabWhitelisted;
       
-      const badgeText = isEnabled ? '' : '';
+      const badgeText = shouldShowDisabled ? '' : '';
       const badgeColor = '#ef4444';
       
       await chrome.action.setBadgeText({ text: badgeText });
-      if (!isEnabled) {
+      if (shouldShowDisabled) {
         await chrome.action.setBadgeBackgroundColor({ color: badgeColor });
       }
     }

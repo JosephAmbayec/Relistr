@@ -3,6 +3,7 @@ interface RelistrSettings {
   enabled: boolean;
   useGlobalSelectors: boolean;
   customRules: Record<string, any>;
+  whitelist: string[];
   stats: {
     totalRemoved: number;
     lastReset: number;
@@ -24,6 +25,7 @@ class RelistrOptions {
     enabled: true,
     useGlobalSelectors: true,
     customRules: {},
+    whitelist: [],
     stats: { totalRemoved: 0, lastReset: Date.now() }
   };
 
@@ -80,6 +82,7 @@ class RelistrOptions {
         enabled: stored.enabled !== undefined ? stored.enabled : true,
         useGlobalSelectors: stored.useGlobalSelectors !== undefined ? stored.useGlobalSelectors : true,
         customRules: stored.customRules || {},
+        whitelist: stored.whitelist || [],
         stats: stored.stats || { totalRemoved: 0, lastReset: Date.now() }
       };
     } catch (error) {
@@ -93,6 +96,7 @@ class RelistrOptions {
         enabled: this.settings.enabled,
         useGlobalSelectors: this.settings.useGlobalSelectors,
         customRules: this.settings.customRules,
+        whitelist: this.settings.whitelist,
         stats: this.settings.stats
       };
       
@@ -110,6 +114,7 @@ class RelistrOptions {
     }
 
     this.updateCustomRulesList();
+    this.updateWhitelistUI();
   }
 
   private updateCustomRulesList(): void {
@@ -159,6 +164,43 @@ class RelistrOptions {
     if (rule.textMatches?.length) parts.push(`${rule.textMatches.length} text matches`);
     if (rule.attributes?.length) parts.push(`${rule.attributes.length} attributes`);
     return parts.join(', ') || 'No rules defined';
+  }
+
+  private updateWhitelistUI(): void {
+    const container = document.getElementById('whitelistItems') as HTMLDivElement;
+    if (!container) return;
+
+    const whitelist = this.settings.whitelist || [];
+
+    if (whitelist.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🌐</div>
+          <div>No whitelisted domains</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = whitelist.map(domain => `
+      <div class="whitelist-item">
+        <div class="whitelist-domain">${domain}</div>
+        <button class="delete-btn" data-domain="${domain}">
+          Remove
+        </button>
+      </div>
+    `).join('');
+
+    // Add event listeners to remove buttons
+    const removeButtons = container.querySelectorAll('.delete-btn');
+    removeButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const domain = (e.target as HTMLButtonElement).getAttribute('data-domain');
+        if (domain) {
+          this.removeFromWhitelist(domain);
+        }
+      });
+    });
   }
 
   private bindEvents(): void {
@@ -239,6 +281,24 @@ class RelistrOptions {
     const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
     if (saveBtn) {
       saveBtn.style.display = 'none'; // Hide manual save button since we auto-save
+    }
+
+    // Whitelist add domain
+    const addDomainBtn = document.getElementById('addDomainBtn') as HTMLButtonElement;
+    const domainInput = document.getElementById('domainInput') as HTMLInputElement;
+    
+    if (addDomainBtn && domainInput) {
+      addDomainBtn.addEventListener('click', () => {
+        this.addToWhitelist(domainInput.value.trim());
+        domainInput.value = '';
+      });
+
+      domainInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          this.addToWhitelist(domainInput.value.trim());
+          domainInput.value = '';
+        }
+      });
     }
   }
 
@@ -342,6 +402,40 @@ class RelistrOptions {
       setTimeout(() => {
         statusDiv.classList.add('status-hidden');
       }, 3000);
+    }
+  }
+
+  private normalizeDomain(domain: string): string {
+    // Remove protocol and www prefix, convert to lowercase
+    return domain.replace(/^(https?:\/\/)?(www\.)?/, '').toLowerCase().split('/')[0];
+  }
+
+  private async addToWhitelist(domain: string): Promise<void> {
+    if (!domain) {
+      this.showStatus('Please enter a valid domain', 'error');
+      return;
+    }
+
+    const normalizedDomain = this.normalizeDomain(domain);
+    
+    if (this.settings.whitelist.includes(normalizedDomain)) {
+      this.showStatus('Domain already in whitelist', 'error');
+      return;
+    }
+
+    this.settings.whitelist.push(normalizedDomain);
+    await this.saveSettings();
+    this.updateWhitelistUI();
+    this.showStatus(`Added ${normalizedDomain} to whitelist`, 'success');
+  }
+
+  private async removeFromWhitelist(domain: string): Promise<void> {
+    const index = this.settings.whitelist.indexOf(domain);
+    if (index > -1) {
+      this.settings.whitelist.splice(index, 1);
+      await this.saveSettings();
+      this.updateWhitelistUI();
+      this.showStatus(`Removed ${domain} from whitelist`, 'success');
     }
   }
 }

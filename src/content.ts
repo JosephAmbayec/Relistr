@@ -37,17 +37,27 @@ class RelistrDOMManipulator {
 
   private async checkEnabled(): Promise<void> {
     try {
-      const settings = await chrome.storage.sync.get(['enabled', 'useGlobalSelectors', 'customRules']);
-      this.enabled = settings.enabled !== false;
+      const settings = await chrome.storage.sync.get(['enabled', 'useGlobalSelectors', 'customRules', 'whitelist']);
+      
+      // Check if current domain is whitelisted
+      const whitelist = settings.whitelist || [];
+      const isWhitelisted = whitelist.some((domain: string) => 
+        this.currentDomain === domain || this.currentDomain.endsWith('.' + domain)
+      );
+      
+      this.enabled = (settings.enabled !== false) && !isWhitelisted;
+      
       
       // Store settings for use in scanning
       (this as any).useGlobalSelectors = settings.useGlobalSelectors !== false;
       (this as any).customRules = settings.customRules || {};
+      (this as any).whitelist = whitelist;
       
     } catch (error) {
       this.enabled = true;
       (this as any).useGlobalSelectors = true;
       (this as any).customRules = {};
+      (this as any).whitelist = [];
     }
   }
 
@@ -123,10 +133,18 @@ class RelistrDOMManipulator {
 
   private setupStorageListener(): void {
     chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'sync' && (changes.customRules || changes.enabled || changes.useGlobalSelectors)) {
+      if (namespace === 'sync' && (changes.customRules || changes.enabled || changes.useGlobalSelectors || changes.whitelist)) {
         this.checkEnabled().then(() => {
-          // Re-scan the page with updated settings
-          this.removeExistingElements();
+          if (this.enabled && !this.observer) {
+            this.loadConfig().then(() => {
+              this.setupMutationObserver();
+              this.removeExistingElements();
+            });
+          } else if (this.enabled && this.observer) {
+            this.removeExistingElements();
+          } else if (!this.enabled && this.observer) {
+            this.destroy();
+          }
         });
       }
     });

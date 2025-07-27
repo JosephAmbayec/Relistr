@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-07-27
+
+### Added
+- **Whitelist Functionality**: Complete domain whitelist system allowing users to disable the extension on specific websites
+- **Whitelist Management UI**: New whitelist section in options page with add/remove domain functionality
+- **Visual State Indicators**: Extension icon changes to greyscale when on whitelisted domains
+- **Real-time Domain Disabling**: Extension automatically disables content removal when visiting whitelisted domains
+
+
 ## [1.1.3] - 2025-07-27
 
 ### Fixed
@@ -69,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform build scripts and packaging
 
 
+[1.2.0]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.2.0
+[1.1.3]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.1.3
+[1.1.2]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.1.2
+[1.1.1]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.1.1
 [1.1.0]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.1.0
 [1.0.0]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.0.0
 

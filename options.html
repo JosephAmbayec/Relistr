@@ -540,6 +540,70 @@
       color: var(--text-secondary);
     }
     
+    .whitelist-input-section {
+      margin-bottom: 24px;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    .domain-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    
+    .domain-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .domain-input::placeholder {
+      color: var(--text-muted);
+    }
+    
+    .whitelist-list {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-height: 300px;
+      overflow-y: auto;
+      box-shadow: var(--shadow);
+    }
+    
+    .whitelist-item {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+    
+    .whitelist-item:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .whitelist-item:last-child {
+      border-bottom: none;
+    }
+    
+    .whitelist-domain {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 15px;
+    }
+
     .fade-in {
       animation: fadeIn 0.4s ease;
     }
@@ -611,6 +675,30 @@
           <input type="checkbox" id="enableGlobalSelectors">
           <span class="slider"></span>
         </label>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Whitelist</h3>
+        <p class="section-description">Domains where the extension will be automatically disabled</p>
+      </div>
+      
+      <div class="whitelist-input-section">
+        <div class="input-group">
+          <input type="text" id="domainInput" placeholder="Enter domain (e.g., example.com)" class="domain-input">
+          <button class="btn btn-primary" id="addDomainBtn">
+            <span>➕</span>
+            Add Domain
+          </button>
+        </div>
+      </div>
+      
+      <div id="whitelistItems" class="whitelist-list">
+        <div class="empty-state">
+          <div class="empty-icon">🌐</div>
+          <div>No whitelisted domains</div>
+        </div>
       </div>
     </div>
     

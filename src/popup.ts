@@ -116,23 +116,34 @@ class RelistrPopup {
       const rawDomain = new URL(tab.url).hostname;
       const domain = this.normalizeDomain(rawDomain);
       
-      // Check for custom rules first
-      const settings = await chrome.storage.sync.get(['customRules', 'useGlobalSelectors']);
-      const hasCustomRules = settings.customRules && settings.customRules[domain];
-      const globalSelectorsEnabled = settings.useGlobalSelectors !== false;
-      
-      // Check built-in config
-      const config = await this.getConfig();
-      const hasBuiltInRules = config?.domains?.[domain] || 
-                             Object.keys(config?.domains || {}).some(d => {
-                               const normalizedConfigDomain = this.normalizeDomain(d);
-                               return normalizedConfigDomain.startsWith('*.') 
-                                 ? domain.endsWith(normalizedConfigDomain.substring(2))
-                                 : normalizedConfigDomain === domain;
-                             });
+      // Check for whitelist first
+      const settings = await chrome.storage.sync.get(['customRules', 'useGlobalSelectors', 'whitelist']);
+      const whitelist = settings.whitelist || [];
+      const isWhitelisted = whitelist.some((whitelistDomain: string) => 
+        domain === whitelistDomain || domain.endsWith('.' + whitelistDomain)
+      );
       
       const statusElement = document.getElementById('domainStatus') as HTMLDivElement;
       if (statusElement) {
+        if (isWhitelisted) {
+          statusElement.className = 'domain-status domain-whitelisted';
+          statusElement.innerHTML = `<span class="status-icon">🚫</span><span>${domain} is whitelisted (disabled)</span>`;
+          return;
+        }
+        
+        const hasCustomRules = settings.customRules && settings.customRules[domain];
+        const globalSelectorsEnabled = settings.useGlobalSelectors !== false;
+        
+        // Check built-in config
+        const config = await this.getConfig();
+        const hasBuiltInRules = config?.domains?.[domain] || 
+                               Object.keys(config?.domains || {}).some(d => {
+                                 const normalizedConfigDomain = this.normalizeDomain(d);
+                                 return normalizedConfigDomain.startsWith('*.') 
+                                   ? domain.endsWith(normalizedConfigDomain.substring(2))
+                                   : normalizedConfigDomain === domain;
+                               });
+        
         if (hasCustomRules) {
           statusElement.className = 'domain-status domain-supported';
           statusElement.innerHTML = `<span class="status-icon">⭐</span><span>${domain} uses custom rules</span>`;
