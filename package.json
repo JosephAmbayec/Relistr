@@ -1,6 +1,6 @@
 {
   "name": "relistr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A browser extension that removes sponsored listings and advertisements from websites using configurable CSS selectors, text matching, and attribute detection",
   "main": "dist/background.js",
   "scripts": {
@@ -27,7 +27,7 @@
   "license": "MIT",
   "keywords": [
     "browser-extension",
-    "ad-blocker", 
+    "ad-blocker",
     "sponsored-content",
     "chrome-extension",
     "privacy",
