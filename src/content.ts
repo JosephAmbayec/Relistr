@@ -27,6 +27,10 @@ class RelistrDOMManipulator {
 
   private async init(): Promise<void> {
     await this.checkEnabled();
+    
+    this.removedCount = 0;
+    this.notifyPageStats();
+    
     if (!this.enabled) return;
     
     await this.loadConfig();
@@ -332,6 +336,9 @@ class RelistrDOMManipulator {
     if (this.observer) {
       this.observer.disconnect();
     }
+    
+    this.removedCount = 0;
+    this.notifyPageStats();
   }
 
   public async toggle(): Promise<void> {
