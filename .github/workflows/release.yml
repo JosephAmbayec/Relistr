@@ -66,50 +66,70 @@ jobs:
       id: contributors
       run: |
         # Get the last release tag (excluding the one we're about to create)
-        LAST_TAG=$(git tag -l --sort=-version:refname | grep -v "^v${{ inputs.version }}$" | head -1)
+        LAST_TAG=$(git tag -l --sort=-version:refname | grep -v "^v${{ inputs.version }}$" | head -1 || echo "")
         
-        if [ -z "$LAST_TAG" ]; then
-          # If no previous tag, get all commits but exclude the version bump
-          COMMIT_RANGE="HEAD~1"
-          COMMIT_RANGE_DISPLAY="initial commit"
-        else
-          # Get commits since last tag, excluding the version bump commit
-          COMMIT_RANGE="$LAST_TAG..HEAD~1"
-          COMMIT_RANGE_DISPLAY="$LAST_TAG"
-        fi
-        
-        # Generate contributors list with commit counts
         echo "CONTRIBUTORS<<EOF" >> $GITHUB_OUTPUT
-        echo "## 🎉 Contributors" >> $GITHUB_OUTPUT
+        echo "## Contributors" >> $GITHUB_OUTPUT
         echo "" >> $GITHUB_OUTPUT
         echo "Thanks to everyone who contributed to this release:" >> $GITHUB_OUTPUT
         echo "" >> $GITHUB_OUTPUT
         
-        # Get unique authors with commit counts since last release, excluding bot commits
-        git log $COMMIT_RANGE --pretty=format:"%an <%ae>" --grep="chore: bump version" --invert-grep | sort | uniq -c | sort -rn | while read count author; do
-          # Extract name and email
-          name=$(echo "$author" | sed 's/ <.*//')
-          email=$(echo "$author" | sed 's/.*<\(.*\)>.*/\1/')
-          
-          # Skip GitHub actions bot and empty lines
-          if [[ -n "$name" && "$email" != "action@github.com" && "$email" != "noreply@github.com" ]]; then
-            echo "- **$name** - $count commit(s)" >> $GITHUB_OUTPUT
-          fi
-        done
+        # Determine commit range for contributors
+        if [ -z "$LAST_TAG" ]; then
+          # No previous tags - get all commits except the current version bump
+          COMMIT_RANGE=""
+          RANGE_DESC="project history"
+        else
+          # Get commits since last tag
+          COMMIT_RANGE="$LAST_TAG..HEAD"
+          RANGE_DESC="$LAST_TAG"
+        fi
+        
+        # Get contributors with commit counts, excluding automated commits
+        if [ -z "$COMMIT_RANGE" ]; then
+          # All commits
+          git log --pretty=format:"%an <%ae>" --grep="chore: bump version" --invert-grep --grep="action@github.com" --invert-grep | sort | uniq -c | sort -rn | while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              count=$(echo "$line" | awk '{print $1}')
+              author=$(echo "$line" | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//')
+              name=$(echo "$author" | sed 's/ <.*//')
+              email=$(echo "$author" | sed 's/.*<\(.*\)>.*/\1/')
+              
+              if [[ -n "$name" && "$email" != "action@github.com" && "$email" != "noreply@github.com" ]]; then
+                echo "- **$name** - $count commit(s)" >> $GITHUB_OUTPUT
+              fi
+            fi
+          done
+        else
+          # Commits since last tag
+          git log $COMMIT_RANGE --pretty=format:"%an <%ae>" --grep="chore: bump version" --invert-grep --grep="action@github.com" --invert-grep | sort | uniq -c | sort -rn | while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              count=$(echo "$line" | awk '{print $1}')
+              author=$(echo "$line" | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//')
+              name=$(echo "$author" | sed 's/ <.*//')
+              email=$(echo "$author" | sed 's/.*<\(.*\)>.*/\1/')
+              
+              if [[ -n "$name" && "$email" != "action@github.com" && "$email" != "noreply@github.com" ]]; then
+                echo "- **$name** - $count commit(s)" >> $GITHUB_OUTPUT
+              fi
+            fi
+          done
+        fi
         
         echo "" >> $GITHUB_OUTPUT
-        echo "### 📊 Release Statistics" >> $GITHUB_OUTPUT
+        echo "### Release Statistics" >> $GITHUB_OUTPUT
         
-        if [ "$COMMIT_RANGE" != "HEAD~1" ]; then
-          total_commits=$(git rev-list --count $COMMIT_RANGE --grep="chore: bump version" --invert-grep)
-          files_changed=$(git diff --name-only $LAST_TAG..HEAD~1 | wc -l)
-          echo "- **$total_commits** commits since $COMMIT_RANGE_DISPLAY" >> $GITHUB_OUTPUT
-          echo "- **$files_changed** files changed" >> $GITHUB_OUTPUT
-        else
-          total_commits=$(git rev-list --count HEAD~1)
+        # Calculate statistics
+        if [ -z "$LAST_TAG" ]; then
+          total_commits=$(git rev-list --count HEAD --grep="chore: bump version" --invert-grep)
           files_changed=$(git ls-files | wc -l)
-          echo "- **$total_commits** commits in this release" >> $GITHUB_OUTPUT
+          echo "- **$total_commits** commits in $RANGE_DESC" >> $GITHUB_OUTPUT
           echo "- **$files_changed** total files in project" >> $GITHUB_OUTPUT
+        else
+          total_commits=$(git rev-list --count $COMMIT_RANGE --grep="chore: bump version" --invert-grep)
+          files_changed=$(git diff --name-only $LAST_TAG..HEAD | wc -l)
+          echo "- **$total_commits** commits since $RANGE_DESC" >> $GITHUB_OUTPUT
+          echo "- **$files_changed** files changed" >> $GITHUB_OUTPUT
         fi
         
         echo "EOF" >> $GITHUB_OUTPUT
