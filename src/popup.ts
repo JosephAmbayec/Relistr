@@ -14,7 +14,7 @@ interface RelistrConfig {
 }
 
 interface MessageRequest {
-  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle';
+  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle' | 'updatePageStats' | 'getPageStats';
   settings?: Partial<RelistrSettings>;
   count?: number;
 }
@@ -28,6 +28,7 @@ class RelistrPopup {
     this.loadTheme();
     await this.loadSettings();
     await this.updateDomainStatus();
+    await this.loadPageStats();
     this.bindEvents();
   }
 
@@ -73,6 +74,33 @@ class RelistrPopup {
         totalRemovedSpan.textContent = (settings.stats?.totalRemoved || 0).toString();
       }
     } catch (error) {
+    }
+  }
+
+  private async loadPageStats(): Promise<void> {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab.id) return;
+
+      // Get page stats from content script via background
+      chrome.tabs.sendMessage(tab.id, { action: 'getPageStats' }, (response) => {
+        if (chrome.runtime.lastError) {
+          this.updatePageStatsDisplay(0);
+          return;
+        }
+        
+        const count = response?.removedCount || 0;
+        this.updatePageStatsDisplay(count);
+      });
+    } catch (error) {
+      this.updatePageStatsDisplay(0);
+    }
+  }
+
+  private updatePageStatsDisplay(count: number): void {
+    const pageRemovedSpan = document.getElementById('pageRemoved') as HTMLSpanElement;
+    if (pageRemovedSpan) {
+      pageRemovedSpan.textContent = count.toString();
     }
   }
 

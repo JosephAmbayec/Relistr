@@ -172,9 +172,18 @@ class RelistrDOMManipulator {
         .forEach(el => elementsToRemove.add(el));
     }
 
-    elementsToRemove.forEach(element => {
-      this.removeElement(element);
-    });
+    // Remove elements and track count in batch
+    const removedCount = elementsToRemove.size;
+    if (removedCount > 0) {
+      elementsToRemove.forEach(element => {
+        this.removeElementWithoutStats(element);
+      });
+      
+      // Update stats with total batch count
+      this.removedCount += removedCount;
+      this.updateStats(removedCount);
+      this.notifyPageStats();
+    }
   }
 
   private findElementsByText(root: Document | Element, textMatches: string[]): Element[] {
@@ -240,14 +249,16 @@ class RelistrDOMManipulator {
            ) || (element.textContent?.includes(sponsoredText) ?? false));
   }
 
-  private removeElement(element: Element): void {
+  private removeElement(element: Element, updateStats: boolean = true): void {
     if (element && element.parentNode) {
       (element as HTMLElement).style.display = 'none';
       element.setAttribute('data-relistr-removed', 'true');
-      this.removedCount++;
       
-      // Update stats in storage
-      this.updateStats();
+      if (updateStats) {
+        this.removedCount++;
+        this.updateStats(1);
+        this.notifyPageStats();
+      }
       
       setTimeout(() => {
         if (element.parentNode) {
@@ -257,9 +268,30 @@ class RelistrDOMManipulator {
     }
   }
 
-  private async updateStats(): Promise<void> {
+  private removeElementWithoutStats(element: Element): void {
+    if (element && element.parentNode) {
+      (element as HTMLElement).style.display = 'none';
+      element.setAttribute('data-relistr-removed', 'true');
+      
+      setTimeout(() => {
+        if (element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+      }, 100);
+    }
+  }
+
+  private notifyPageStats(): void {
     try {
-      chrome.runtime.sendMessage({ action: 'incrementStats', count: 1 });
+      chrome.runtime.sendMessage({ action: 'updatePageStats', count: this.removedCount });
+    } catch (error) {
+      // Ignore if popup is not open
+    }
+  }
+
+  private async updateStats(count: number = 1): Promise<void> {
+    try {
+      chrome.runtime.sendMessage({ action: 'incrementStats', count: count });
     } catch (error) {
     }
   }
@@ -278,15 +310,25 @@ class RelistrDOMManipulator {
       this.destroy();
     }
   }
+
+  public getPageStats(): { removedCount: number; domain: string } {
+    return {
+      removedCount: this.removedCount,
+      domain: this.currentDomain
+    };
+  }
 }
 
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'toggle') {
-    // Handle toggle if needed
     sendResponse({ success: true });
+  } else if (request.action === 'getPageStats') {
+    const stats = relistrInstance?.getPageStats() || { removedCount: 0, domain: window.location.hostname };
+    sendResponse(stats);
   }
+  return true;
 });
 
 let relistrInstance: RelistrDOMManipulator;

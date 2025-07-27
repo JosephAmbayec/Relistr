@@ -9,7 +9,7 @@ interface RelistrSettings {
 }
 
 interface MessageRequest {
-  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle';
+  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle' | 'updatePageStats' | 'getPageStats';
   settings?: Partial<RelistrSettings>;
   count?: number;
 }
@@ -20,6 +20,8 @@ interface RelistrConfig {
 }
 
 class RelistrBackground {
+  private pageStats: Map<number, number> = new Map();
+
   constructor() {
     this.init();
   }
@@ -29,6 +31,8 @@ class RelistrBackground {
     chrome.action.onClicked.addListener(this.handleActionClick.bind(this));
     chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
     chrome.storage.onChanged.addListener(this.handleStorageChange.bind(this));
+    chrome.tabs.onRemoved.addListener(this.handleTabRemoved.bind(this));
+    chrome.tabs.onActivated.addListener(this.handleTabActivated.bind(this));
     
     // Update icon on startup
     this.updateIcon();
@@ -93,6 +97,23 @@ class RelistrBackground {
           sendResponse(config);
         });
         return true;
+        
+      case 'updatePageStats':
+        if (sender.tab?.id && request.count !== undefined) {
+          this.pageStats.set(sender.tab.id, request.count);
+          this.updateBadge(sender.tab.id);
+        }
+        sendResponse({ success: true });
+        return true;
+        
+      case 'getPageStats':
+        if (sender.tab?.id) {
+          const count = this.pageStats.get(sender.tab.id) || 0;
+          sendResponse({ removedCount: count });
+        } else {
+          sendResponse({ removedCount: 0 });
+        }
+        return true;
     }
     
     return false;
@@ -121,6 +142,36 @@ class RelistrBackground {
     }
   }
 
+  private handleTabRemoved(tabId: number): void {
+    this.pageStats.delete(tabId);
+  }
+
+  private handleTabActivated(activeInfo: chrome.tabs.TabActiveInfo): void {
+    this.updateBadge(activeInfo.tabId);
+  }
+
+  private async updateBadge(tabId: number): Promise<void> {
+    try {
+      const settings = await chrome.storage.sync.get(['enabled']);
+      const isEnabled = settings.enabled !== false;
+      
+      if (!isEnabled) {
+        await chrome.action.setBadgeText({ text: '', tabId });
+        return;
+      }
+      
+      const count = this.pageStats.get(tabId) || 0;
+      const badgeText = count > 0 ? count.toString() : '';
+      
+      await chrome.action.setBadgeText({ text: badgeText, tabId });
+      if (count > 0) {
+        await chrome.action.setBadgeBackgroundColor({ color: '#44ef58', tabId });
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   private async updateIcon(): Promise<void> {
     try {
       const settings = await chrome.storage.sync.get(['enabled']);
@@ -142,8 +193,10 @@ class RelistrBackground {
 
       await chrome.action.setIcon({ path: iconPath });
       
-      // Clear any existing badge when using icons
-      await chrome.action.setBadgeText({ text: '' });
+      // Clear badges when disabled, or maintain current badge when enabled
+      if (!isEnabled) {
+        await chrome.action.setBadgeText({ text: '' });
+      }
       
     } catch (error) {
       console.log(error)

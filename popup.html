@@ -186,13 +186,19 @@
       transform: translateX(20px);
     }
     
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
     .stats-card {
       background: var(--success-bg);
       border: 1px solid var(--success);
       border-radius: var(--radius);
       padding: 16px;
       text-align: center;
-      margin-bottom: 20px;
     }
     
     .stats-number {
@@ -327,9 +333,15 @@
       </div>
     </div>
     
-    <div class="stats-card">
-      <div class="stats-number" id="totalRemoved">0</div>
-      <div class="stats-label">Ads Removed</div>
+    <div class="stats-grid">
+      <div class="stats-card">
+        <div class="stats-number" id="pageRemoved">0</div>
+        <div class="stats-label">On This Page</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-number" id="totalRemoved">0</div>
+        <div class="stats-label">Total Removed</div>
+      </div>
     </div>
     
     <div id="domainStatus" class="domain-status">
