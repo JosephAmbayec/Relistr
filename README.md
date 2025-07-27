@@ -85,11 +85,7 @@ Actually, Relistr can be used in tandum with other ad blocker extensions! Relist
 
 ## Supported Websites
 
-Relistr comes with built-in rules for:
-- Amazon.com / Amazon.ca
-- Google Search
-- Reddit
-- And more...
+Relistr comes with built-in rules for a variety of domains, please consider [Contributing](https://github.com/JosephAmbayec/Relistr/blob/master/CONTRIBUTING.md) with your field-tested custom rulesets! 
 
 ## Configuration Options
 
