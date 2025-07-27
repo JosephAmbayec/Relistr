@@ -49,6 +49,56 @@ jobs:
     - name: Build extension
       run: npm run build
       
+    - name: Generate contributors list
+      id: contributors
+      run: |
+        # Get the last release tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        
+        if [ -z "$LAST_TAG" ]; then
+          # If no previous tag, get all commits
+          COMMIT_RANGE=""
+        else
+          # Get commits since last tag
+          COMMIT_RANGE="$LAST_TAG..HEAD"
+        fi
+        
+        # Generate contributors list with commit counts
+        echo "CONTRIBUTORS<<EOF" >> $GITHUB_OUTPUT
+        echo "## Contributors" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "Thanks to everyone who contributed to this release:" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        
+        # Get unique authors with commit counts since last release
+        git log $COMMIT_RANGE --pretty=format:"%an <%ae>" | sort | uniq -c | sort -rn | while read count author; do
+          # Extract name and email
+          name=$(echo "$author" | sed 's/ <.*//')
+          email=$(echo "$author" | sed 's/.*<\(.*\)>.*/\1/')
+          
+          # Skip GitHub actions bot
+          if [[ "$email" != "action@github.com" && "$email" != "noreply@github.com" ]]; then
+            echo "- **$name** - $count commit(s)" >> $GITHUB_OUTPUT
+          fi
+        done
+        
+        echo "" >> $GITHUB_OUTPUT
+        echo "### Release Statistics" >> $GITHUB_OUTPUT
+        
+        if [ -n "$COMMIT_RANGE" ]; then
+          total_commits=$(git rev-list --count $COMMIT_RANGE)
+          files_changed=$(git diff --name-only $LAST_TAG..HEAD | wc -l)
+          echo "- **$total_commits** commits since $LAST_TAG" >> $GITHUB_OUTPUT
+          echo "- **$files_changed** files changed" >> $GITHUB_OUTPUT
+        else
+          total_commits=$(git rev-list --count HEAD)
+          files_changed=$(git ls-files | wc -l)
+          echo "- **$total_commits** total commits" >> $GITHUB_OUTPUT
+          echo "- **$files_changed** total files" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "EOF" >> $GITHUB_OUTPUT
+        
     - name: Generate changelog entry
       id: changelog
       run: |
@@ -103,6 +153,8 @@ jobs:
         release_name: Relistr v${{ inputs.version }}
         body: |
           ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ${{ steps.contributors.outputs.CONTRIBUTORS }}
           
           ## Installation
           
