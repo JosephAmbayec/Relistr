@@ -140,25 +140,22 @@ Relistr/
 ├── popup.html           # Popup UI
 ├── options.html         # Options page UI
 ├── config.json          # Built-in blocking rules
+├── CHANGELOG.md         # Complete changelog
+├── CONTRIBUTING.md      # Contribution Guide
+├── config.json          # Built-in blocking rules
 └── test-custom-selectors.json  # Example custom rules
 ```
 
 ### Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Add tests if applicable
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
+See [Contributing Guide](https://github.com/JosephAmbayec/Relistr/blob/master/CONTRIBUTING.md)
 
 ### Adding New Website Rules
 
 To add support for a new website:
 
 1. Identify the sponsored content elements on the target website
-2. Add rules to `config.json` under the `domains` section:
+2. Add Custom Selector Rules in the Options menu via JSON or forms.
    ```json
    "newsite.com": {
      "selectors": [".sponsored-item"],
@@ -167,7 +164,8 @@ To add support for a new website:
    }
    ```
 3. Test the rules on the website
-4. Submit a pull request
+4. Export your custom ruleset json
+5. Submit a pull request with the json
 
 ## Security & Privacy
 
