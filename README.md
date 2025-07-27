@@ -7,7 +7,7 @@ A browser extension that removes sponsored listings and advertisements from webs
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Why use Relistr instead of other ad blockers?
-Actually, Relistr can be used in tandum with other ad blocker extensions! Relistr exists to serve as an open-source way to programmatically remove listings and sponsored elements from webpages. Typical ad blockers may not work on hard embedded elements or on unsupported sites. With Relistr, you can add your own custom element removal rulesets, so that you can remove sponsored content/listings on typically unsupported pages! You can also share your rulesets with others, and/or contribute them to the global Relistr rulesets. See [![Contributing Guide](https://github.com/JosephAmbayec/Relistr/blob/master/CONTRIBUTING.md)
+Actually, Relistr can be used in tandum with other ad blocker extensions! Relistr exists to serve as an open-source way to programmatically remove listings and sponsored elements from webpages. Typical ad blockers may not work on hard embedded elements or on unsupported sites. With Relistr, you can add your own custom element removal rulesets, so that you can remove sponsored content/listings on typically unsupported pages! You can also share your rulesets with others, and/or contribute them to the global Relistr rulesets. See [Contributing Guide](https://github.com/JosephAmbayec/Relistr/blob/master/CONTRIBUTING.md)
 
 ## Features
 
