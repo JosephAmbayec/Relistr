@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-07-27
+
+### Added
+- **Custom Rule Editing**: Direct editing of custom rules through the options interface
+- **Edit Modal Interface**: User-friendly modal form for modifying existing rules
+- **Rule Validation**: JSON validation and required field checking for edited rules
+- **In-Place Rule Management**: Edit rules without deleting and re-uploading
+
+### Enhanced
+- **Options Interface**: Added edit buttons alongside delete buttons for each custom rule
+- **User Experience**: Seamless rule modification with save/cancel functionality
+- **Form Handling**: Separate text areas for selectors, text matches, and attributes
+
+### Technical Improvements
+- Modal system with overlay and keyboard shortcuts (Escape to close)
+- Form validation with clear error messaging
+- Rule parsing and serialization for different rule types
+- Event handling for modal interactions and form submission
+
 ## [1.3.0] - 2025-07-27
 
 ### Enhanced
@@ -87,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform build scripts and packaging
 
 
+[1.4.0]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.4.0
 [1.3.0]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.3.0
 [1.2.0]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.2.0
 [1.1.3]: https://github.com/JosephAmbayec/Relistr/releases/tag/v1.1.3
