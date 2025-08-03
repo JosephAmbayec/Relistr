@@ -3,7 +3,7 @@
 A browser extension that removes sponsored listings and advertisements from websites using configurable CSS selectors, text matching, and attribute detection.
 
 [![Build Status](https://github.com/JosephAmbayec/Relistr/actions/workflows/ci.yml/badge.svg)](https://github.com/JosephAmbayec/Relistr/actions)
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/{extension-id-will-add})](https://chrome.google.com/webstore/detail/{extension-id-will-add})
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/{extension-id-will-add})](https://chromewebstore.google.com/detail/relistr-sponsored-content/cehkeibkjkaejmkkioiamlnoddihiamm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Why use Relistr instead of other ad blockers?
@@ -21,7 +21,7 @@ Actually, Relistr can be used in tandum with other ad blocker extensions! Relist
 ## Installation
 
 ### From Chrome Web Store (Recommended)
-1. Visit the [Chrome Web Store page](https://chrome.google.com/webstore/detail/{extension-id-will-add})
+1. Visit the [Chrome Web Store page](https://chromewebstore.google.com/detail/relistr-sponsored-content/cehkeibkjkaejmkkioiamlnoddihiamm)
 2. Click "Add to Chrome"
 3. Confirm the installation
 

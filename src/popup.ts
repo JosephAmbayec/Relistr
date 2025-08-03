@@ -14,12 +14,16 @@ interface RelistrConfig {
 }
 
 interface MessageRequest {
-  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle' | 'updatePageStats' | 'getPageStats';
+  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle' | 'updatePageStats' | 'getPageStats' | 'zapperElementsChanged' | 'zapperStarted' | 'zapperStopped' | 'getZapperState';
   settings?: Partial<RelistrSettings>;
   count?: number;
+  tabId?: number;
 }
 
 class RelistrPopup {
+  private zapperActive: boolean = false;
+  private selectedCount: number = 0;
+
   constructor() {
     this.init();
   }
@@ -29,7 +33,9 @@ class RelistrPopup {
     await this.loadSettings();
     await this.updateDomainStatus();
     await this.loadPageStats();
+    await this.restoreZapperState();
     this.bindEvents();
+    this.setupMessageListener();
   }
 
   private loadTheme(): void {
@@ -175,6 +181,9 @@ class RelistrPopup {
     const resetStatsBtn = document.getElementById('resetStats') as HTMLButtonElement;
     const openOptionsBtn = document.getElementById('openOptions') as HTMLButtonElement;
     const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
+    const zapperToggle = document.getElementById('zapperToggle') as HTMLButtonElement;
+    const saveRules = document.getElementById('saveRules') as HTMLButtonElement;
+    const cancelZapper = document.getElementById('cancelZapper') as HTMLButtonElement;
 
     if (enableToggle) {
       enableToggle.addEventListener('change', async (e) => {
@@ -230,6 +239,155 @@ class RelistrPopup {
         this.toggleTheme();
       });
     }
+
+    if (zapperToggle) {
+      zapperToggle.addEventListener('click', () => {
+        this.toggleZapper();
+      });
+    }
+
+    if (saveRules) {
+      saveRules.addEventListener('click', () => {
+        this.saveZapperRules();
+      });
+    }
+
+    if (cancelZapper) {
+      cancelZapper.addEventListener('click', () => {
+        this.cancelZapper();
+      });
+    }
+  }
+
+  private async toggleZapper(): Promise<void> {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab.id) return;
+
+    if (this.zapperActive) {
+      this.stopZapper();
+    } else {
+      this.startZapper();
+    }
+  }
+
+  private async startZapper(): Promise<void> {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab.id) return;
+
+    try {
+      await chrome.tabs.sendMessage(tab.id, { action: 'startZapper' });
+      this.zapperActive = true;
+      this.selectedCount = 0;
+      this.updateZapperUI();
+      
+      // Close popup so user can interact with page
+      window.close();
+    } catch (error) {
+      console.error('Failed to start zapper:', error);
+    }
+  }
+
+  private async stopZapper(): Promise<void> {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab.id) return;
+
+    try {
+      await chrome.tabs.sendMessage(tab.id, { action: 'stopZapper' });
+      this.zapperActive = false;
+      this.selectedCount = 0;
+      this.updateZapperUI();
+    } catch (error) {
+      console.error('Failed to stop zapper:', error);
+    }
+  }
+
+  private async saveZapperRules(): Promise<void> {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab.id) return;
+
+    try {
+      await chrome.tabs.sendMessage(tab.id, { action: 'saveZapperRules' });
+      this.zapperActive = false;
+      this.selectedCount = 0;
+      this.updateZapperUI();
+      
+      // Refresh domain status to show new custom rules
+      await this.updateDomainStatus();
+    } catch (error) {
+      console.error('Failed to save zapper rules:', error);
+    }
+  }
+
+  private cancelZapper(): void {
+    this.stopZapper();
+  }
+
+  private updateZapperUI(): void {
+    const zapperToggle = document.getElementById('zapperToggle') as HTMLButtonElement;
+    const zapperInfo = document.getElementById('zapperInfo') as HTMLDivElement;
+    const zapperControls = document.getElementById('zapperControls') as HTMLDivElement;
+
+    if (zapperToggle) {
+      if (this.zapperActive) {
+        zapperToggle.classList.add('active');
+        zapperToggle.innerHTML = '<span>🎯</span>Zapper Active';
+      } else {
+        zapperToggle.classList.remove('active');
+        zapperToggle.innerHTML = '<span>🎯</span>Element Zapper';
+      }
+    }
+
+    if (zapperInfo) {
+      if (this.zapperActive) {
+        zapperInfo.classList.add('active');
+        zapperInfo.textContent = `Hover to inspect elements, click to select them. Selected: ${this.selectedCount}`;
+      } else {
+        zapperInfo.classList.remove('active');
+      }
+    }
+
+    if (zapperControls) {
+      if (this.zapperActive && this.selectedCount > 0) {
+        zapperControls.classList.add('active');
+      } else {
+        zapperControls.classList.remove('active');
+      }
+    }
+  }
+
+  private async restoreZapperState(): Promise<void> {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab.id) return;
+      
+      const response = await chrome.runtime.sendMessage({ 
+        action: 'getZapperState', 
+        tabId: tab.id 
+      });
+      if (response && response.active) {
+        this.zapperActive = response.active;
+        this.selectedCount = response.selectedCount || 0;
+        this.updateZapperUI();
+      }
+    } catch (error) {
+      // Background script might not be ready, ignore error
+    }
+  }
+
+  private setupMessageListener(): void {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === 'zapperElementsChanged') {
+        this.selectedCount = message.count || 0;
+        this.updateZapperUI();
+      } else if (message.action === 'zapperCancelled') {
+        this.zapperActive = false;
+        this.selectedCount = 0;
+        this.updateZapperUI();
+      } else if (message.action === 'zapperRulesSaved') {
+        // Rules were saved, update domain status
+        this.updateDomainStatus();
+      }
+    });
   }
 }
 

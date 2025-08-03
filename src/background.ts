@@ -11,9 +11,10 @@ interface RelistrSettings {
 }
 
 interface MessageRequest {
-  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle' | 'updatePageStats' | 'getPageStats';
+  action: 'getSettings' | 'updateSettings' | 'incrementStats' | 'getConfig' | 'toggle' | 'updatePageStats' | 'getPageStats' | 'zapperElementsChanged' | 'zapperStarted' | 'zapperStopped' | 'getZapperState';
   settings?: Partial<RelistrSettings>;
   count?: number;
+  tabId?: number;
 }
 
 interface RelistrConfig {
@@ -21,8 +22,15 @@ interface RelistrConfig {
   globalSelectors: string[];
 }
 
+interface ZapperState {
+  active: boolean;
+  selectedCount: number;
+  domain: string;
+}
+
 class RelistrBackground {
   private pageStats: Map<number, number> = new Map();
+  private zapperStates: Map<number, ZapperState> = new Map();
 
   constructor() {
     this.init();
@@ -118,6 +126,49 @@ class RelistrBackground {
           sendResponse({ removedCount: 0 });
         }
         return true;
+        
+      case 'zapperElementsChanged':
+        if (sender.tab?.id) {
+          const state = this.zapperStates.get(sender.tab.id);
+          if (state) {
+            state.selectedCount = request.count || 0;
+            this.zapperStates.set(sender.tab.id, state);
+            this.updateZapperBadge(sender.tab.id);
+          }
+        }
+        sendResponse({ success: true });
+        return true;
+        
+      case 'zapperStarted':
+        if (sender.tab?.id && sender.tab.url) {
+          const domain = this.normalizeDomain(new URL(sender.tab.url).hostname);
+          this.zapperStates.set(sender.tab.id, {
+            active: true,
+            selectedCount: 0,
+            domain
+          });
+          this.updateZapperBadge(sender.tab.id);
+        }
+        sendResponse({ success: true });
+        return true;
+        
+      case 'zapperStopped':
+        if (sender.tab?.id) {
+          this.zapperStates.delete(sender.tab.id);
+          this.updateBadge(sender.tab.id);
+        }
+        sendResponse({ success: true });
+        return true;
+        
+      case 'getZapperState':
+        const tabId = request.tabId || sender.tab?.id;
+        if (tabId) {
+          const state = this.zapperStates.get(tabId);
+          sendResponse(state || { active: false, selectedCount: 0, domain: '' });
+        } else {
+          sendResponse({ active: false, selectedCount: 0, domain: '' });
+        }
+        return true;
     }
     
     return false;
@@ -156,6 +207,7 @@ class RelistrBackground {
 
   private handleTabRemoved(tabId: number): void {
     this.pageStats.delete(tabId);
+    this.zapperStates.delete(tabId);
   }
 
   private handleTabActivated(activeInfo: chrome.tabs.TabActiveInfo): void {
@@ -226,6 +278,13 @@ class RelistrBackground {
         return;
       }
       
+      // Check if zapper is active for this tab
+      const zapperState = this.zapperStates.get(tabId);
+      if (zapperState && zapperState.active) {
+        this.updateZapperBadge(tabId);
+        return;
+      }
+      
       const count = this.pageStats.get(tabId) || 0;
       const badgeText = count > 0 ? count.toString() : '';
       
@@ -235,6 +294,19 @@ class RelistrBackground {
       }
     } catch (error) {
       console.log(error)
+    }
+  }
+
+  private async updateZapperBadge(tabId: number): Promise<void> {
+    try {
+      const zapperState = this.zapperStates.get(tabId);
+      if (zapperState && zapperState.active) {
+        const badgeText = zapperState.selectedCount > 0 ? zapperState.selectedCount.toString() : '🎯';
+        await chrome.action.setBadgeText({ text: badgeText, tabId });
+        await chrome.action.setBadgeBackgroundColor({ color: '#f59e0b', tabId });
+      }
+    } catch (error) {
+      console.log(error);
     }
   }
 

@@ -258,6 +258,82 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .zapper-section {
+      margin-bottom: 20px;
+    }
+    
+    .btn-zapper {
+      background: var(--warning);
+      color: white;
+      box-shadow: var(--shadow);
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    
+    .btn-zapper:hover {
+      background: #e67e22;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .btn-zapper.active {
+      background: var(--danger);
+    }
+    
+    .btn-zapper.active:hover {
+      background: #dc2626;
+    }
+    
+    .zapper-info {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      display: none;
+    }
+    
+    .zapper-info.active {
+      display: block;
+    }
+    
+    .zapper-controls {
+      display: none;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .zapper-controls.active {
+      display: flex;
+    }
+    
+    .btn-save-rules {
+      background: var(--success);
+      color: white;
+      box-shadow: var(--shadow);
+      flex: 1;
+    }
+    
+    .btn-save-rules:hover {
+      background: #059669;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .btn-cancel-zapper {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      flex: 1;
+    }
+    
+    .btn-cancel-zapper:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
     }
     
     .btn {
@@ -353,6 +429,26 @@
     <div id="domainStatus" class="domain-status">
       <span class="status-icon">⏳</span>
       <span>Checking domain support...</span>
+    </div>
+    
+    <div class="zapper-section">
+      <button class="btn btn-zapper" id="zapperToggle">
+        <span>🎯</span>
+        Element Zapper
+      </button>
+      <div class="zapper-info" id="zapperInfo">
+        Click to start, hover over elements to inspect, click elements to select them, then click "Save Rules" to add to config
+      </div>
+      <div class="zapper-controls" id="zapperControls">
+        <button class="btn btn-save-rules" id="saveRules">
+          <span>💾</span>
+          Save Rules
+        </button>
+        <button class="btn btn-cancel-zapper" id="cancelZapper">
+          <span>❌</span>
+          Cancel
+        </button>
+      </div>
     </div>
     
     <div class="actions">

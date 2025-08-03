@@ -19,6 +19,10 @@ class RelistrDOMManipulator {
   private observer: MutationObserver | null = null;
   private removedCount: number = 0;
   private enabled: boolean = true;
+  private zapperMode: boolean = false;
+  private selectedElements: Element[] = [];
+  private highlightedElement: Element | null = null;
+  private zapperOverlay: HTMLDivElement | null = null;
 
   constructor() {
     this.currentDomain = this.normalizeDomain(window.location.hostname);
@@ -356,6 +360,344 @@ class RelistrDOMManipulator {
       domain: this.currentDomain
     };
   }
+
+  public startZapperMode(): void {
+    this.zapperMode = true;
+    this.selectedElements = [];
+    this.createZapperStyles();
+    this.addZapperEventListeners();
+    document.body.style.cursor = 'crosshair';
+    
+    // Notify background script
+    chrome.runtime.sendMessage({ action: 'zapperStarted' });
+  }
+
+  public stopZapperMode(): void {
+    this.zapperMode = false;
+    this.selectedElements = [];
+    this.removeZapperHighlight();
+    this.removeZapperEventListeners();
+    this.removeZapperStyles();
+    document.body.style.cursor = '';
+    if (this.zapperOverlay) {
+      this.zapperOverlay.remove();
+      this.zapperOverlay = null;
+    }
+    
+    // Notify background script
+    chrome.runtime.sendMessage({ action: 'zapperStopped' });
+  }
+
+  public getSelectedElements(): Element[] {
+    return [...this.selectedElements];
+  }
+
+  public async saveZapperRules(): Promise<void> {
+    if (this.selectedElements.length === 0) return;
+
+    const rules = this.generateConfigFromElements(this.selectedElements);
+    await this.saveCustomRules(rules);
+    this.stopZapperMode();
+  }
+
+  private createZapperStyles(): void {
+    const style = document.createElement('style');
+    style.id = 'relistr-zapper-styles';
+    style.textContent = `
+      .relistr-highlight {
+        outline: 3px solid #f59e0b !important;
+        outline-offset: 2px !important;
+        background-color: rgba(245, 158, 11, 0.1) !important;
+        position: relative !important;
+      }
+      .relistr-selected {
+        outline: 3px solid #10b981 !important;
+        outline-offset: 2px !important;
+        background-color: rgba(16, 185, 129, 0.2) !important;
+      }
+      .relistr-zapper-info {
+        position: fixed !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        background: rgba(0, 0, 0, 0.9) !important;
+        color: white !important;
+        padding: 12px 16px !important;
+        border-radius: 8px !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        font-size: 14px !important;
+        z-index: 999999 !important;
+        max-width: 320px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  private removeZapperStyles(): void {
+    const style = document.getElementById('relistr-zapper-styles');
+    if (style) style.remove();
+    
+    document.querySelectorAll('.relistr-highlight, .relistr-selected').forEach(el => {
+      el.classList.remove('relistr-highlight', 'relistr-selected');
+    });
+  }
+
+  private addZapperEventListeners(): void {
+    document.addEventListener('mouseover', this.handleZapperMouseOver);
+    document.addEventListener('mouseout', this.handleZapperMouseOut);
+    document.addEventListener('click', this.handleZapperClick);
+    document.addEventListener('keydown', this.handleZapperKeydown);
+  }
+
+  private removeZapperEventListeners(): void {
+    document.removeEventListener('mouseover', this.handleZapperMouseOver);
+    document.removeEventListener('mouseout', this.handleZapperMouseOut);
+    document.removeEventListener('click', this.handleZapperClick);
+    document.removeEventListener('keydown', this.handleZapperKeydown);
+  }
+
+  private handleZapperMouseOver = (e: MouseEvent): void => {
+    if (!this.zapperMode) return;
+    
+    const target = e.target as Element;
+    if (target && target !== document.body && target !== document.documentElement) {
+      this.highlightElement(target);
+    }
+  };
+
+  private handleZapperMouseOut = (e: MouseEvent): void => {
+    if (!this.zapperMode) return;
+    this.removeZapperHighlight();
+  };
+
+  private handleZapperClick = (e: MouseEvent): void => {
+    if (!this.zapperMode) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const target = e.target as Element;
+    if (target && target !== document.body && target !== document.documentElement) {
+      this.selectElement(target);
+    }
+  };
+
+  private handleZapperKeydown = (e: KeyboardEvent): void => {
+    if (!this.zapperMode) return;
+    
+    if (e.key === 'Escape') {
+      this.stopZapperMode();
+      chrome.runtime.sendMessage({ action: 'zapperCancelled' });
+    }
+  };
+
+  private highlightElement(element: Element): void {
+    this.removeZapperHighlight();
+    
+    // Don't highlight elements that have already been removed by Relistr
+    if (element.hasAttribute('data-relistr-removed')) {
+      return;
+    }
+    
+    if (!this.selectedElements.includes(element)) {
+      element.classList.add('relistr-highlight');
+      this.highlightedElement = element;
+      this.showElementInfo(element);
+    }
+  }
+
+  private removeZapperHighlight(): void {
+    if (this.highlightedElement) {
+      this.highlightedElement.classList.remove('relistr-highlight');
+      this.highlightedElement = null;
+    }
+    this.hideElementInfo();
+  }
+
+  private selectElement(element: Element): void {
+    // Don't select elements that have already been removed by Relistr
+    if (element.hasAttribute('data-relistr-removed')) {
+      return;
+    }
+    
+    if (this.selectedElements.includes(element)) {
+      this.selectedElements = this.selectedElements.filter(el => el !== element);
+      element.classList.remove('relistr-selected');
+    } else {
+      this.selectedElements.push(element);
+      element.classList.add('relistr-selected');
+    }
+    
+    element.classList.remove('relistr-highlight');
+    this.highlightedElement = null;
+    
+    chrome.runtime.sendMessage({ 
+      action: 'zapperElementsChanged', 
+      count: this.selectedElements.length 
+    });
+  }
+
+  private showElementInfo(element: Element): void {
+    this.hideElementInfo();
+    
+    const info = this.zapperOverlay = document.createElement('div');
+    info.className = 'relistr-zapper-info';
+    
+    const tagName = element.tagName.toLowerCase();
+    const className = element.className ? `.${Array.from(element.classList).join('.')}` : '';
+    const id = element.id ? `#${element.id}` : '';
+    const attributes = Array.from(element.attributes)
+      .filter(attr => attr.name !== 'class' && attr.name !== 'id')
+      .map(attr => `${attr.name}="${attr.value}"`)
+      .slice(0, 3);
+    
+    info.innerHTML = `
+      <div><strong>Tag:</strong> ${tagName}${id}${className}</div>
+      ${attributes.length > 0 ? `<div><strong>Attributes:</strong> ${attributes.join(', ')}</div>` : ''}
+      <div><strong>Selected:</strong> ${this.selectedElements.length} elements</div>
+      <div style="margin-top: 8px; font-size: 12px; opacity: 0.8;">
+        Click to select • ESC to exit
+      </div>
+    `;
+    
+    document.body.appendChild(info);
+  }
+
+  private hideElementInfo(): void {
+    if (this.zapperOverlay) {
+      this.zapperOverlay.remove();
+      this.zapperOverlay = null;
+    }
+  }
+
+  private generateConfigFromElements(elements: Element[]): DomainConfig {
+    const selectors: string[] = [];
+    const textMatches: string[] = [];
+    const attributes: Array<{ name: string; value: string }> = [];
+    
+    elements.forEach(element => {
+      // Try to generate a unique CSS selector
+      const selector = this.generateCSSSelector(element);
+      if (selector && !selectors.includes(selector)) {
+        selectors.push(selector);
+      }
+      
+      // Extract text patterns
+      const text = element.textContent?.trim();
+      if (text && text.length < 100) {
+        const words = text.split(/\s+/).filter(word => word.length > 3);
+        words.forEach(word => {
+          if (!textMatches.includes(word) && textMatches.length < 5) {
+            textMatches.push(word);
+          }
+        });
+      }
+      
+      // Extract useful attributes
+      Array.from(element.attributes).forEach(attr => {
+        if (this.isUsefulAttribute(attr.name, attr.value) && !this.isRelistrAttribute(attr.name, attr.value)) {
+          const attrRule = { name: attr.name, value: attr.value };
+          if (!attributes.some(a => a.name === attrRule.name && a.value === attrRule.value)) {
+            attributes.push(attrRule);
+          }
+        }
+      });
+    });
+    
+    return {
+      selectors: selectors.length > 0 ? selectors : undefined,
+      textMatches: textMatches.length > 0 ? textMatches : undefined,
+      attributes: attributes.length > 0 ? attributes : undefined
+    };
+  }
+
+  private generateCSSSelector(element: Element): string {
+    // Prioritize by ID, then class, then attributes
+    if (element.id) {
+      return `#${element.id}`;
+    }
+    
+    if (element.className) {
+      const classes = Array.from(element.classList)
+        .filter(cls => cls.length > 0)
+        .filter(cls => !this.isRelistrClass(cls));
+      if (classes.length > 0) {
+        return `.${classes.join('.')}`;
+      }
+    }
+    
+    // Try data attributes
+    for (const attr of Array.from(element.attributes)) {
+      if (attr.name.startsWith('data-') && attr.value) {
+        return `[${attr.name}="${attr.value}"]`;
+      }
+    }
+    
+    // Fallback to tag name with specific attributes
+    const tagName = element.tagName.toLowerCase();
+    for (const attr of Array.from(element.attributes)) {
+      if (this.isUsefulAttribute(attr.name, attr.value)) {
+        return `${tagName}[${attr.name}*="${attr.value}"]`;
+      }
+    }
+    
+    return `${tagName}`;
+  }
+
+  private isUsefulAttribute(name: string, value: string): boolean {
+    const usefulAttrs = ['data-testid', 'data-test', 'aria-label', 'role', 'class'];
+    const adKeywords = ['ad', 'sponsor', 'promo', 'commercial', 'advertisement'];
+    
+    return usefulAttrs.includes(name) || 
+           adKeywords.some(keyword => value.toLowerCase().includes(keyword));
+  }
+
+  private isRelistrClass(className: string): boolean {
+    const relistrClasses = ['relistr-highlight', 'relistr-selected', 'relistr-zapper-info'];
+    return relistrClasses.includes(className) || className.startsWith('relistr-');
+  }
+
+  private isRelistrAttribute(name: string, value: string): boolean {
+    // Filter out Relistr's own attributes
+    if (name === 'data-relistr-removed') return true;
+    if (name === 'class' && value.includes('relistr-')) return true;
+    return false;
+  }
+
+  private async saveCustomRules(newRules: DomainConfig): Promise<void> {
+    try {
+      const { customRules = {} } = await chrome.storage.sync.get(['customRules']);
+      
+      // Merge with existing rules for this domain
+      const existingRules = customRules[this.currentDomain] || {};
+      const mergedRules: DomainConfig = {
+        selectors: [...(existingRules.selectors || []), ...(newRules.selectors || [])],
+        textMatches: [...(existingRules.textMatches || []), ...(newRules.textMatches || [])],
+        attributes: [...(existingRules.attributes || []), ...(newRules.attributes || [])]
+      };
+      
+      // Remove duplicates
+      if (mergedRules.selectors) {
+        mergedRules.selectors = [...new Set(mergedRules.selectors)];
+      }
+      if (mergedRules.textMatches) {
+        mergedRules.textMatches = [...new Set(mergedRules.textMatches)];
+      }
+      if (mergedRules.attributes) {
+        mergedRules.attributes = mergedRules.attributes.filter((attr, index, self) => 
+          index === self.findIndex(a => a.name === attr.name && a.value === attr.value)
+        );
+      }
+      
+      customRules[this.currentDomain] = mergedRules;
+      await chrome.storage.sync.set({ customRules });
+      
+      chrome.runtime.sendMessage({ action: 'zapperRulesSaved', domain: this.currentDomain });
+    } catch (error) {
+      console.error('Failed to save zapper rules:', error);
+    }
+  }
 }
 
 
@@ -366,6 +708,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'getPageStats') {
     const stats = relistrInstance?.getPageStats() || { removedCount: 0, domain: window.location.hostname };
     sendResponse(stats);
+  } else if (request.action === 'startZapper') {
+    relistrInstance?.startZapperMode();
+    sendResponse({ success: true });
+  } else if (request.action === 'stopZapper') {
+    relistrInstance?.stopZapperMode();
+    sendResponse({ success: true });
+  } else if (request.action === 'saveZapperRules') {
+    relistrInstance?.saveZapperRules();
+    sendResponse({ success: true });
   }
   return true;
 });
