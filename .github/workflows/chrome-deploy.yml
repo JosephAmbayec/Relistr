@@ -50,14 +50,66 @@ jobs:
         
     - name: Deploy to Chrome Web Store
       if: ${{ secrets.CHROME_EXTENSION_ID != '' }}
-      uses: mnao305/chrome-extension-upload@v4.0.1
-      with:
-        file-path: chrome-deploy/extension.zip
-        extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
-        client-id: ${{ secrets.CHROME_CLIENT_ID }}
-        client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-        refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        publish: true
+      env:
+        EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+        CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+        CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+        REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      run: |
+        # Get access token using refresh token
+        echo "Getting access token..."
+        ACCESS_TOKEN_RESPONSE=$(curl -s -X POST \
+          -d "client_id=${CLIENT_ID}" \
+          -d "client_secret=${CLIENT_SECRET}" \
+          -d "refresh_token=${REFRESH_TOKEN}" \
+          -d "grant_type=refresh_token" \
+          https://oauth2.googleapis.com/token)
+        
+        ACCESS_TOKEN=$(echo $ACCESS_TOKEN_RESPONSE | jq -r '.access_token')
+        
+        if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+          echo "Failed to get access token:"
+          echo $ACCESS_TOKEN_RESPONSE
+          exit 1
+        fi
+        
+        # Upload extension to Chrome Web Store
+        echo "Uploading extension..."
+        UPLOAD_RESPONSE=$(curl -s -X PUT \
+          -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+          -H "x-goog-api-version: 2" \
+          -T chrome-deploy/extension.zip \
+          "https://www.googleapis.com/chromewebstore/v1.1/items/${EXTENSION_ID}")
+        
+        echo "Upload response:"
+        echo $UPLOAD_RESPONSE | jq '.'
+        
+        # Check if upload was successful
+        UPLOAD_STATE=$(echo $UPLOAD_RESPONSE | jq -r '.uploadState // empty')
+        if [ "$UPLOAD_STATE" != "SUCCESS" ]; then
+          echo "Upload failed!"
+          exit 1
+        fi
+        
+        # Publish the extension
+        echo "Publishing extension..."
+        PUBLISH_RESPONSE=$(curl -s -X POST \
+          -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+          -H "x-goog-api-version: 2" \
+          -H "Content-Length: 0" \
+          "https://www.googleapis.com/chromewebstore/v1.1/items/${EXTENSION_ID}/publish")
+        
+        echo "Publish response:"
+        echo $PUBLISH_RESPONSE | jq '.'
+        
+        # Check publish status
+        PUBLISH_STATUS=$(echo $PUBLISH_RESPONSE | jq -r '.status[0] // empty')
+        if [ -n "$PUBLISH_STATUS" ] && [ "$PUBLISH_STATUS" != "OK" ]; then
+          echo "Publish failed with status: $PUBLISH_STATUS"
+          exit 1
+        fi
+        
+        echo "✅ Extension deployed successfully!"
         
     - name: Create deployment summary
       run: |
@@ -98,6 +150,13 @@ jobs:
         ### Required Secrets
         - \`CHROME_EXTENSION_ID\`: Your extension's ID from Chrome Web Store
         - \`CHROME_CLIENT_ID\`: OAuth client ID from Google Cloud Console
-        - \`CHROME_CLIENT_SECRET\`: OAuth client secret
+        - \`CHROME_CLIENT_SECRET\`: OAuth client secret from Google Cloud Console
         - \`CHROME_REFRESH_TOKEN\`: OAuth refresh token for authentication
+        
+        ### Setup Instructions
+        1. Create a Google Cloud project and enable Chrome Web Store API
+        2. Create OAuth client ID for web application
+        3. Add https://developers.google.com/oauthplayground as authorized redirect URI
+        4. Use OAuth Playground with scope: https://www.googleapis.com/auth/chromewebstore
+        5. Generate refresh token and add all credentials as repository secrets
         EOF
