@@ -1,8 +1,6 @@
 name: Chrome Web Store Deploy
 
 on:
-  repository_dispatch:
-    types: [chrome-web-store-deploy]
   workflow_dispatch:
     inputs:
       version:
@@ -18,7 +16,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: v${{ github.event.client_payload.version || inputs.version }}
+        ref: v${{ inputs.version }}
         
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -116,7 +114,7 @@ jobs:
         cat << EOF >> $GITHUB_STEP_SUMMARY
         ## 🚀 Chrome Web Store Deployment
         
-        **Version:** ${{ github.event.client_payload.version || inputs.version }}
+        **Version:** ${{ inputs.version }}
         **Status:** ✅ Deployed Successfully
         **Extension ID:** \`${{ secrets.CHROME_EXTENSION_ID }}\`
         **Store URL:** https://chrome.google.com/webstore/detail/${{ secrets.CHROME_EXTENSION_ID }}
@@ -138,7 +136,7 @@ jobs:
         cat << EOF >> $GITHUB_STEP_SUMMARY
         ## ❌ Chrome Web Store Deployment Failed
         
-        **Version:** ${{ github.event.client_payload.version || inputs.version }}
+        **Version:** ${{ inputs.version }}
         **Status:** Failed
         
         ### Possible Issues
